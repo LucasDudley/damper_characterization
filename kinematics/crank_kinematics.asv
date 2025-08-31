@@ -1,0 +1,9 @@
+clear, clc, close all
+% script to compute the piston/crank kinematics
+
+
+function x_disp = crank_kinematics[theta, Lc, R]
+
+
+
+end
