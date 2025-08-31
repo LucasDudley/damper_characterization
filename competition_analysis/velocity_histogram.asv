@@ -1,0 +1,73 @@
+clear, clc, close all
+s = settings;
+s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
+
+% load data
+all_data = load('2025_endurance_data.mat');
+
+% store positions
+data.time = all_data.Shock_Pots_FL_Lin_Pot_Value.Time;
+data.FL_pos = all_data.Shock_Pots_FL_Lin_Pot_Value.Value;
+data.FR_pos = all_data.Shock_Pots_FR_Lin_Pot_Value.Value;
+data.RL_pos = all_data.Shock_Pots_RL_Lin_Pot_Value.Value;
+data.RR_pos = all_data.Shock_Pots_RR_Lin_Pot_Value.Value;
+
+% sample time step (assuming uniform)
+dt = mean(diff(data.time));
+Fs = 1/dt; % sampling frequency
+
+%% calculate velocities
+fields = {'FL','FR','RL','RR'};
+for i = 1:numel(fields)
+    pos = data.([fields{i} '_pos']);
+    vel = diff(pos)./diff(data.time);
+    
+    % low-pass filter (cutoff ~ 20 Hz, adjust as needed)
+    vel_filt = lowpass(vel,20,Fs);
+    
+    % store back in struct
+    data.([fields{i} '_vel']) = vel;
+    data.([fields{i} '_vel_filt']) = vel_filt;
+end
+
+%% histogram of filtered velocities
+figure
+for i = 1:numel(fields)
+    vel = data.([fields{i} '_vel_filt']);
+    
+    subplot(2,2,i)
+    
+    % histogram normalized to probability (%)
+    h = histogram(vel,100,'Normalization','probability');
+    hold on
+    
+    % get stats
+    mu = mean(vel);
+    sigma = std(vel);
+    
+    % vertical lines with values in legend
+    xline(mu,'k-','LineWidth',1.5, ...
+        'DisplayName',sprintf('Mean = %.2f',mu));
+    xline(mu+sigma,'r--','LineWidth',1.2, ...
+        'DisplayName',sprintf('+1σ = %.2f',mu+sigma));
+    xline(mu-sigma,'r--','LineWidth',1.2, ...
+     );
+    xline(mu+2*sigma,'b--','LineWidth',1.2, ...
+        'DisplayName',sprintf('+2σ = %.2f',mu+2*sigma));
+    xline(mu-2*sigma,'b--','LineWidth',1.2);
+    
+    % format
+    xlabel('Velocity [in/s]'); 
+    ylabel('Percentage [%]')
+    ylim([0 max(h.Values)*1.2]) % pad a bit
+    yt = yticks; 
+    yticklabels(yt*100); % convert to percent
+    grid on
+    title([fields{i}])
+    legend('Location','NorthWest')
+    xlim([-3*sigma, 3*sigma])
+    box off
+end
+
+set(findall(gcf,'-property','FontName'),'FontName','Times New Roman')
+set(findall(gcf,'-property','FontSize'),'FontSize',12)
