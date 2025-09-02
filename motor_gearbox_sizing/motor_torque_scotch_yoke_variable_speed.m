@@ -10,7 +10,7 @@ set(groot, 'DefaultTextFontName', 'Times New Roman')
 %% Inputs
 inputs.max_linear_vel_range = linspace(0.5, 6, 10); %[in/s]
 inputs.stroke = 1.5; %[in]
-inputs.gear_ratio = 10; %[motor/crank]
+inputs.gear_ratio = 15; %[motor/crank]
 
 % Auxiliary inputs
 r_crank = inputs.stroke / 2;
@@ -114,3 +114,58 @@ dim = [0.65 0.15 0.2 0.05]; % [x y w h] in normalized figure units
 annotation('textbox', dim, 'String', gear_ratio_str, ...
            'EdgeColor','none', 'HorizontalAlignment','right', ...
            'FontWeight','bold', 'FontSize', 12);
+
+
+% Export PDF
+filename = fullfile('G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Work Updates\Motor_Torque_calcs\torque_and_power', ...
+    sprintf('stroke%.2f_max%.2f_gr%d', inputs.stroke, max(inputs.max_linear_vel_range), inputs.gear_ratio));
+% save as png and pdf
+exportgraphics(gcf, [filename '.pdf'], 'ContentType','vector', 'BackgroundColor','none');
+
+
+
+%% 
+gear_ratios = [5, 10, 15, 20]; %[motor/crank]
+
+% Auxiliary inputs
+r_crank = inputs.stroke / 2;
+inputs.theta = linspace(0, 4*pi, 500); %[rad]
+
+% Preallocate results
+motor_torque_rms_all  = zeros(length(inputs.max_linear_vel_range), length(gear_ratios));
+motor_torque_peak_all = zeros(length(inputs.max_linear_vel_range), length(gear_ratios));
+motor_rpm_all         = zeros(length(inputs.max_linear_vel_range), length(gear_ratios));
+
+% Compute torque for each gear ratio
+for g = 1:length(gear_ratios)
+    gear = gear_ratios(g);
+    
+    torque_stats = arrayfun(@(v) compute_torque_stats(v, r_crank, inputs.theta, gear), ...
+                            inputs.max_linear_vel_range, 'UniformOutput', false);
+    
+    for k = 1:numel(torque_stats)
+        motor_torque_rms_all(k,g)  = torque_stats{k}.motor_rms;
+        motor_torque_peak_all(k,g) = torque_stats{k}.motor_peak;
+        motor_rpm_all(k,g)         = torque_stats{k}.rpm;
+    end
+end
+
+% Plot Torque vs Max Linear Velocity for multiple gear ratios
+figure()
+colors = lines(length(gear_ratios));
+
+for g = 1:length(gear_ratios)
+    plot(inputs.max_linear_vel_range, motor_torque_peak_all(:,g)*16, '--o', 'Color', colors(g,:), 'LineWidth', 1.5);
+    hold on
+end
+
+ylabel('Peak Motor Torque [oz·in]')
+xlabel('Max Linear Velocity [in/s]')
+grid on
+
+% Correct legend for only peak torque
+legend_strings = arrayfun(@(gr) sprintf('Gear Ratio %d', gr), gear_ratios, 'UniformOutput', false);
+legend(legend_strings, 'Location', 'northwest')
+
+box off
+xlim([inputs.max_linear_vel_range(1), inputs.max_linear_vel_range(end)])
