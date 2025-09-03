@@ -91,51 +91,21 @@ end
 % Plot torque vs speed relationship
 figure
 yyaxis left
-h1 = plot(gear_ratios, motor_speed_rpm, 'LineWidth', 1.5);
+plot(gear_ratios, motor_speed_rpm, 'LineWidth', 1.5)
 ylabel('Motor Speed [RPM]')
-set(gca, 'YScale', 'log')   % log scale for motor speed
-
 yyaxis right
-h2 = plot(gear_ratios, motor_torque_max * 16, 'LineWidth', 1.5); hold on
-h3 = plot(gear_ratios, motor_torque_rms * 16, 'LineWidth', 1.5);
+plot(gear_ratios, motor_torque_max * 16, 'LineWidth', 1.5)
+hold on
+plot(gear_ratios, motor_torque_rms * 16, 'LineWidth', 1.5)
 ylabel('Motor Torque [oz·in]')
-set(gca, 'YScale', 'log')   % log scale for torque
-
 xlabel('Gear Ratio')
 title(sprintf('Motor Requirements (Stroke = %.3f in, Max Linear Speed = %d in/s)', ...
     inputs.stroke, inputs.max_linear_vel));
 grid on
 box off
+legend('Motor Speed','Peak Torque','RMS Torque','Location','best')
 
-% Legend only for main curves
-legend([h1 h2 h3], {'Motor Speed','Peak Torque','RMS Torque'}, 'Location','best')
-xlim([1 15])
+xlim([])
 
-% Pick a gear ratio value directly
-g_val = 10;
 
-yyaxis right
-y_peak = interp1(gear_ratios, motor_torque_max*16, g_val);
-y_rms  = interp1(gear_ratios, motor_torque_rms*16, g_val);
-xr = xlim;
 
-% Horizontal lines to right axis (black, no legend entry)
-plot([g_val xr(2)], [y_peak y_peak], '--k', 'LineWidth', 1, 'HandleVisibility','off');
-plot([g_val xr(2)], [y_rms y_rms], '--k', 'LineWidth', 1, 'HandleVisibility','off');
-
-% Labels
-text(xr(2), y_peak, sprintf(' Peak Torque = %.1f', y_peak), ...
-    'Color','k','VerticalAlignment','bottom','HorizontalAlignment','right');
-text(xr(2), y_rms, sprintf(' RMS Torque = %.1f', y_rms), ...
-    'Color','k','VerticalAlignment','top','HorizontalAlignment','right');
-
-yyaxis left
-y_rpm = interp1(gear_ratios, motor_speed_rpm, g_val);
-xl = xlim;
-
-% Horizontal line to left axis 
-plot([g_val xl(1)], [y_rpm y_rpm], '--k', 'LineWidth', 1, 'HandleVisibility','off');
-
-% Label
-text(xl(1), y_rpm, sprintf(' Motor Speed = %.0f RPM', y_rpm), ...
-    'Color','k','VerticalAlignment','bottom','HorizontalAlignment','left');
