@@ -16,7 +16,7 @@ function model_params()
     
     % model params
     c_linear = 5000; %[N·s/m]
-    R_crank = 1 / 39.37; %[m] 
+    R_crank = 0.75 / 39.37; %[m] 
     
     assignin('base','c_linear',c_linear);
     assignin('base','R_crank',R_crank);
