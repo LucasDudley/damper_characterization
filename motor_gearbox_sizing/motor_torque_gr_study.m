@@ -1,3 +1,5 @@
+% Create plots trading motor torque and rpm for specified speed
+
 clear, clc, close all
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
@@ -12,12 +14,16 @@ set(groot, 'DefaultTextFontName', 'Times New Roman')
 inputs.max_linear_vel = 5; %[in\s]
 inputs.stroke = 1.5; %[in]
 inputs.theta = linspace(0, 4*pi, 500); %[rad]
+inputs.mass = (2) / 32.17; %[slugs]
 
-% kinematics
+% kinematics (scotch yoke)
 r_crank = inputs.stroke / 2; 
-linear_disp = r_crank .* sin(inputs.theta); % [in]
-theta_dot = inputs.max_linear_vel ./ r_crank; %[rad/s]
-linear_vel = r_crank .* theta_dot .* cos(inputs.theta); %[in/s]
+linear_disp = r_crank .* sin(inputs.theta); % [in] linear displacement from theta
+theta_dot = inputs.max_linear_vel ./ r_crank; %[rad/s] determine the angular speed from max linear speed
+linear_vel = r_crank .* theta_dot .* cos(inputs.theta); %[in/s] determine the linear speed from angular speed
+linear_accel = r_crank * theta_dot^2 * sin(inputs.theta); %[in/s^2] linear angular accel
+
+% extract maximum displacement and maximium damper velocity
 [disp_max, i_disp] = max(linear_disp);
 [vel_max, i_vel] = max(linear_vel);
 
@@ -25,16 +31,21 @@ linear_vel = r_crank .* theta_dot .* cos(inputs.theta); %[in/s]
 damping_force = zeros(size(inputs.theta));
 for idx = 1:length(inputs.theta)
     temp_linear_vel = linear_vel(idx);
-    damping_force(idx) = ohlins_damper_model(0,4,0,4, temp_linear_vel); %[lbf]
+    damping_force(idx) = ohlins_damper_model(0,4,0,4, temp_linear_vel); %[lbf] invert speed due to sign converntion (extension here is positive)
 end
-Tp_crank = r_crank.* cos(inputs.theta) .* damping_force; % [lbf*in] crank toque required
+
+%forces
+inertial_force = linear_accel * inputs.mass;
+gravity_force = inputs.mass * 32.17 * ones(size(inputs.theta));
+net_force = damping_force + gravity_force + inertial_force;
+
+Tp_crank = r_crank.* cos(inputs.theta) .* net_force; % [lbf*in] crank toque required
 
 % calcualte the peak and RMS torque required
 [Tp_crank_max, i_Tp_crank] = max(abs(Tp_crank));
 Tp_crank_rms = sqrt(mean(Tp_crank.^2));
 
-
-
+%%
 % plot kinematics
 figure
 yyaxis left

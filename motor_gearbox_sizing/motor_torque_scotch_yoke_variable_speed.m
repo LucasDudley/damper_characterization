@@ -1,6 +1,6 @@
-clear, clc, close all
-
 % Script to calculate RMS and Peak Torque/Power for all speeds for a given gear ratio
+
+clear, clc, close all
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
 
@@ -13,6 +13,8 @@ set(groot, 'DefaultTextFontName', 'Times New Roman')
 inputs.max_linear_vel_range = linspace(0.5, 6, 10); %[in/s]
 inputs.stroke = 1.5; %[in]
 inputs.gear_ratio = 10; %[motor/crank]
+inputs.mass = (2) / 32.17; %[slugs]
+
 
 % Auxiliary inputs
 r_crank = inputs.stroke / 2;
@@ -28,7 +30,7 @@ motor_power_rms    = zeros(size(inputs.max_linear_vel_range));
 motor_power_peak   = zeros(size(inputs.max_linear_vel_range));
 
 %% Compute torque/power stats
-torque_stats = arrayfun(@(v) compute_torque_stats(v, r_crank, inputs.theta, inputs.gear_ratio), ...
+torque_stats = arrayfun(@(v) compute_torque_stats(v, r_crank, inputs.theta, inputs.gear_ratio, inputs.mass), ...
                         inputs.max_linear_vel_range, 'UniformOutput', false);
 
 % Unpack results
@@ -43,20 +45,27 @@ for k = 1:numel(torque_stats)
 end
 
 %% Helper function
-function stats = compute_torque_stats(linear_vel, r_crank, theta, gear_ratio)
+function stats = compute_torque_stats(linear_vel, r_crank, theta, gear_ratio, mass)
 
-    % Kinematics
+    % Kinematics (scotch-yoke)
     theta_dot   = linear_vel ./ r_crank;
-    piston_vel  = r_crank .* theta_dot .* cos(theta);
+    linear_vel  = r_crank .* theta_dot .* cos(theta); %[in/s]
+    linear_accel = r_crank * theta_dot^2 * sin(theta); %[in/s^2]
+
 
     % Damping force calculation
     damping_force = zeros(size(theta));
     for j = 1:length(theta)
-        damping_force(j) = ohlins_damper_model(0, 4, 0, 4, piston_vel(j));
+        damping_force(j) = ohlins_damper_model(0, 4, 0, 4, linear_vel(j));
     end
 
+    % forces
+    inertial_force = linear_accel * mass;
+    gravity_force = mass * 32.17 * ones(size(theta));
+    net_force = damping_force + gravity_force + inertial_force;
+
     % Crank torque
-    crank_torque = r_crank .* cos(theta) .* damping_force; %[lbf·in]
+    crank_torque = r_crank .* cos(theta) .* net_force; %[lbf·in]
 
     % Stats
     stats.crank_peak = max(abs(crank_torque));
