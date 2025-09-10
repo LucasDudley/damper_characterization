@@ -1,0 +1,17 @@
+clear, clc, close all
+
+% Create DataAcquisition object
+dq = daq("ni");
+
+% Add counter output channel for pulse generation (PWM)
+addoutput(dq, "Dev1", "ctr0", "PulseGeneration");
+
+% Set frequency and duty cycle
+dq.Channels(1).Frequency = 1000;   % 1 kHz
+dq.Channels(1).DutyCycle = 0.5;    % 50%
+
+% Duration
+duration = seconds(30);
+
+% Start PWM for fixed duration
+start(dq, "Duration", duration);
