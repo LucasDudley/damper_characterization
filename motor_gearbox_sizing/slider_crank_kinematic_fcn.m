@@ -6,34 +6,31 @@ function [x, x_dot, x_ddot] = slider_crank_kinematic_fcn(theta, theta_dot, Lc, R
 %
 %   Inputs:
 %       theta      - Crank angle [rad] (scalar or vector)
-%       theta_dot  - Crank angular velocity [rad/s] (scalar or vector same size as theta)
+%       theta_dot  - Crank angular velocity [rad/s]
 %       Lc         - Connecting rod length [in or consistent units]
 %       R          - Crank radius [in or consistent units]
 %
 %   Outputs:
-%       x          - Slider displacement relative to crank pin [same units as R]
-%       x_dot      - Slider linear velocity [units of x / s]
-%       x_ddot     - Slider linear acceleration [units of x / s^2]
+%       x          - Slider displacement [same units as R]
+%       x_dot      - Slider velocity [units of x/s]
+%       x_ddot     - Slider acceleration [units of x/s²]
 %
-%   Notes:
-%       - θ is measured from crank angle reference where θ=0 corresponds 
-%         to the crank aligned with slider axis.
-%       - The equations assume constant crank angular velocity θ̇.
-%       - Works with scalar or vector θ.
+%   Assumptions:
+%       - θ is measured from crank aligned with slider axis.
+%       - θ̇ is constant (θ̈ = 0).
 
-    % Dimensionless ratio
     n = Lc / R;
+    denom = sqrt(n.^2 - sin(theta).^2);
 
-    % Position: x(θ)
-    x = R .* (1 - cos(theta) + n - sqrt(n.^2 - sin(theta).^2));
+    % Position
+    x = R .* (1 - cos(theta) + n - denom);
 
-    % Velocity: dx/dt = (dx/dθ)*θ̇
-    dx_dtheta = R .* (sin(theta) + (sin(2*theta)) ./ (2 .* sqrt(n.^2 - sin(theta).^2)));
+    % First derivative dx/dθ
+    dx_dtheta = R .* (sin(theta) + (sin(2*theta)) ./ (2 .* denom));
     x_dot = theta_dot .* dx_dtheta;
 
-    % Acceleration: d²x/dt² = (d²x/dθ²)*(θ̇²)
-    denom = sqrt(n.^2 - sin(theta).^2);
+    % Second derivative d²x/dθ²
     d2x_dtheta2 = R .* (cos(theta) + (cos(2*theta)) ./ denom + ...
-                        (sin(theta).^2 .* cos(theta).^2) ./ (denom.^3));
+                        2 * (sin(theta).^2 .* cos(theta).^2) ./ (denom.^3));
     x_ddot = (theta_dot).^2 .* d2x_dtheta2;
 end

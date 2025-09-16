@@ -19,7 +19,6 @@ inputs.Lc = 6; %[in]
 % kinematics
 r_crank = inputs.stroke / 2; %determine required radius
 theta_dot = required_theta_dot(inputs.max_linear_vel, inputs.Lc, r_crank); %[rad/s] determine the angular speed from max linear speed
-
 [linear_disp, linear_vel, linear_accel] = slider_crank_kinematic_fcn(inputs.theta, theta_dot, inputs.Lc, r_crank); % forward kinematics
 
 % extract maximum displacement and maximium damper velocity
