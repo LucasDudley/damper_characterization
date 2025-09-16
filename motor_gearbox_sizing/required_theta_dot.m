@@ -1,20 +1,19 @@
 function [theta_dot_req, Gmax, theta_at_Gmax] = required_theta_dot(V_des, Lc, R)
-    % REQUIRED_THETA_DOT  required constant angular speed to achieve desired peak linear speed
-    %   [theta_dot_req, Gmax, theta_at_Gmax] = required_theta_dot(V_des, Lc, R)
-    %
-    % Inputs:
-    %   V_des - desired maximum linear speed (same units as R * theta_dot)
-    %   Lc    - connecting length (m)
-    %   R     - crank radius (m)
-    %
-    % Outputs:
-    %   theta_dot_req  - required constant angular speed (rad/s)
-    %   Gmax           - maximum geometric gain G(theta)
-    %   theta_at_Gmax  - theta (rad) where Gmax occurs
-    %
-    % Notes:
-    %   - G(theta) = R*( sin(theta) + sin(2*theta)/(2*sqrt(n^2 - sin(theta)^2)) )
-    %   - requires n = Lc/R; if n < 1 some theta produce imaginary sqrt; those are ignored.
+% required constant angular speed to achieve desired peak linear speed
+%
+% Inputs:
+%   V_des - desired maximum linear speed (same units as R * theta_dot)
+%   Lc    - connecting length (m)
+%   R     - crank radius (m)
+%
+% Outputs:
+%   theta_dot_req  - required constant angular speed (rad/s)
+%   Gmax           - maximum geometric gain G(theta)
+%   theta_at_Gmax  - theta (rad) where Gmax occurs
+%
+% Notes:
+%   - G(theta) = R*( sin(theta) + sin(2*theta)/(2*sqrt(n^2 - sin(theta)^2)) )
+%   - requires n = Lc/R; if n < 1 some theta produce imaginary sqrt; those are ignored.
     
     n = Lc ./ R;
     Gfun = @(th) R .* ( sin(th) + (sin(2.*th)) ./ (2.*sqrt(max(0, n.^2 - sin(th).^2))) );

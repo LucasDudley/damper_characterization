@@ -1,8 +1,4 @@
 function [x, x_dot, x_ddot] = slider_crank_kinematic_fcn(theta, theta_dot, Lc, R)
-%SLIDER_CRANK_KINEMATIC_FCN Compute position, velocity, and acceleration of a slider in a slider-crank mechanism.
-%
-%   [x, x_dot, x_ddot] = slider_crank_kinematic_fcn(theta, theta_dot, Lc, R)
-%
 %   This function calculates the slider position, velocity, and acceleration 
 %   for a standard in-line slider-crank mechanism given crank angle(s) θ 
 %   and crank angular velocity θ̇. The connecting rod length (Lc) and 

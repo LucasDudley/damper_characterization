@@ -4,9 +4,8 @@ clear, clc, close all
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
 
-
 % add damper model to path
-addpath('D:\AME441_Code\damper_characterization\ohlins_model')
+addpath(fullfile(fileparts(pwd), 'ohlins_model'));
 set(groot, 'DefaultAxesFontName', 'Times New Roman')
 set(groot, 'DefaultTextFontName', 'Times New Roman')
 
