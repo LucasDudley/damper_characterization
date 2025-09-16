@@ -1,0 +1,16 @@
+function [x, x_dot, x_ddot] = slider_crank_kinematic_fcn(theta, theta_dot, Lc, R)
+% ASSUME constant angular velocity
+
+n = Lc/R;
+% position
+x = R.*(1 - cos(theta) + n - sqrt(n.^2 - sin(theta).^2));
+
+% velocity
+x_dot = theta_dot.*R.*(sin(theta) + (sin(2*theta))/(2.*sqrt(n.^2 - sin(theta).^2)));
+
+% acceleration
+x_ddot = n   
+
+
+
+end

@@ -79,6 +79,7 @@ elseif velocity < 0
     damping_force = NaN;
 elseif velocity == 0
     damping_force = 0;
+    return
 end
 
 %% GET DAMPING FORCE for COMPRESSION
