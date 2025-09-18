@@ -8,9 +8,9 @@ import matplotlib.dates as mdates
 
 # --- Configuration ---
 DEVICE_NAME = "Dev1"
-CHANNEL = "ai0"
+CHANNEL = "ai1"
 SAMPLE_RATE = 1000  # Hz
-CHUNK_SIZE = 100    # Samples per read
+CHUNK_SIZE = 200    # Samples per read
 PLOT_WINDOW_SECONDS = 5 # How many seconds of data to display on the plot
 
 # --- Global Data Buffers and Timestamps ---
@@ -25,6 +25,7 @@ fig, ax = plt.subplots(figsize=(10, 5))
 line, = ax.plot([], [], marker='.')
 ax.set_xlabel("Time")
 ax.set_ylabel("Voltage (V)")
+ax.set_title("Real-Time NI-DAQmx Data")
 ax.grid(True)
 
 # Format the x-axis to display time in HH:MM:SS format
@@ -63,14 +64,17 @@ try:
             
             ax.relim()
             ax.autoscale_view(scalex=False, scaley=True)
-            
-            # When blit=False, we don't need to return anything
-            # return line, 
 
-        # Create the animation with blitting turned OFF
-        ani = animation.FuncAnimation(fig, update, interval=0, blit=False)
+        # Create the animation, explicitly disabling the frame data cache
+        ani = animation.FuncAnimation(
+            fig,
+            update,
+            interval=0,
+            blit=False,
+            cache_frame_data=False
+        )
 
-        print("Streaming and plotting data... Press Ctrl+C or close the plot window to stop.")
+        print("Streaming and plotting data.")
         plt.show()
 
 except KeyboardInterrupt:
