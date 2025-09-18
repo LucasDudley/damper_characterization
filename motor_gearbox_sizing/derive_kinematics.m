@@ -3,7 +3,7 @@ clear, clc, close all
 syms theta theta_dot R n
 
 
-% --- 1. Define the Position Equation ---
+% Define the Position Equation
 % This is the exact analytical equation for the slider's displacement
 % measured from its position at theta = 0 (Top Dead Center).
 x = R * (1 - cos(theta) + n - sqrt(n^2 - sin(theta)^2));
@@ -13,7 +13,7 @@ pretty(x);
 fprintf('\n');
 
 
-% --- 2. Compute Velocity ---
+%Compute Velocity
 % dx/d(theta)
 dx_dtheta = diff(x, theta);
 
@@ -27,19 +27,16 @@ pretty(simplify(x_dot));
 fprintf('\n');
 
 
-% --- 3. Compute Acceleration ---
+% Compute Acceleration
 % d^2x/d(theta)^2
 d2x_dtheta2 = diff(dx_dtheta, theta);
 
-% The acceleration (x_ddot) is found assuming a constant angular velocity
-% (theta_ddot = 0):
+% The acceleration (x_ddot) is found assuming a constant angular velocity (theta_ddot = 0):
 % x_ddot = (d^2x/d(theta)^2) * (d(theta)/dt)^2
 x_ddot = d2x_dtheta2 * theta_dot^2;
 
 
 fprintf('Derived Acceleration Equation, x_ddot(theta):\n');
-% The result of diff is often long, so simplify() is essential to make
-% it recognizable and compact.
 simplified_x_ddot = simplify(x_ddot);
 pretty(simplified_x_ddot);
 fprintf('\n');
