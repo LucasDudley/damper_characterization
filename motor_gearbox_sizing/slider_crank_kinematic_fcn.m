@@ -30,7 +30,7 @@ function [x, x_dot, x_ddot] = slider_crank_kinematic_fcn(theta, theta_dot, Lc, R
     x_dot = theta_dot .* dx_dtheta;
 
     % Second derivative d²x/dθ²
-    d2x_dtheta2 = R .* (cos(theta) + (cos(2*theta)) ./ denom + ...
-                        2 * (sin(theta).^2 .* cos(theta).^2) ./ (denom.^3));
-    x_ddot = (theta_dot).^2 .* d2x_dtheta2;
+    numerator_accel = n.^2 .* cos(2.*theta) + sin(theta).^4;
+    denom_accel = (n.^2 - sin(theta).^2).^(3/2);
+    x_ddot = theta_dot.^2 .* R .* (cos(theta) + numerator_accel ./ denom_accel);
 end
