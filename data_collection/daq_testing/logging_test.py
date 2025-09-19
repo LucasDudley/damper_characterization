@@ -5,13 +5,15 @@ import matplotlib.animation as animation
 from collections import deque
 import datetime
 import matplotlib.dates as mdates
+from nidaqmx.constants import TerminalConfiguration, AcquisitionType
+
 
 # --- Configuration Constants ---
 DEVICE_NAME = "Dev1"
 CHANNEL = "ai1"
-SAMPLE_RATE = 1000      # Hz
-CHUNK_SIZE = 500        # Samples per read
-PLOT_WINDOW_SECONDS = 5 # How many seconds of data to display
+SAMPLE_RATE = 300     # Hz
+CHUNK_SIZE = 50        # Samples per read
+PLOT_WINDOW_SECONDS = 3 # How many seconds of data to display
 
 def setup_plot():
     """Creates and configures the Matplotlib figure and axes."""
@@ -28,14 +30,21 @@ def setup_plot():
     return fig, ax, line
 
 def setup_daq_task():
-    """Creates and configures the NI-DAQmx analog input task."""
+    """Creates and configures the NI-DAQmx analog input task for RSE."""
 
     task = nidaqmx.Task()
-    task.ai_channels.add_ai_voltage_chan(f"{DEVICE_NAME}/{CHANNEL}")
+    
+    # Add the terminal_config argument here
+    task.ai_channels.add_ai_voltage_chan(
+        f"{DEVICE_NAME}/{CHANNEL}",
+        terminal_config=TerminalConfiguration.RSE
+    )
+    
     task.timing.cfg_samp_clk_timing(
         rate=SAMPLE_RATE,
-        sample_mode=nidaqmx.constants.AcquisitionType.CONTINUOUS
+        sample_mode=AcquisitionType.CONTINUOUS
     )
+    
     return task
 
 def create_update_function(task, line, data_q, time_q):
