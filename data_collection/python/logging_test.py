@@ -11,7 +11,7 @@ from nidaqmx.constants import TerminalConfiguration, AcquisitionType
 # --- Configuration Constants ---
 DEVICE_NAME = "Dev1"
 CHANNEL = "ai1"
-SAMPLE_RATE = 300     # Hz
+SAMPLE_RATE = 300      # Hz
 CHUNK_SIZE = 50        # Samples per read
 PLOT_WINDOW_SECONDS = 3 # How many seconds of data to display
 
@@ -22,7 +22,6 @@ def setup_plot():
     line, = ax.plot([], [], marker='.')
     ax.set_xlabel("Time")
     ax.set_ylabel("Voltage (V)")
-    ax.set_title("Real-Time NI-DAQmx Data")
     ax.grid(True)
     formatter = mdates.DateFormatter('%H:%M:%S')
     ax.xaxis.set_major_formatter(formatter)
@@ -112,8 +111,6 @@ def main():
             print("Streaming and plotting data.")
             plt.show()
 
-    except KeyboardInterrupt:
-        print("\nInterrupted by user. Stopping.")
     except Exception as e:
         print(f"An error occurred: {e}")
     finally:
