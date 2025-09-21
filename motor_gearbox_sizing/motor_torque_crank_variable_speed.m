@@ -50,7 +50,7 @@ function stats = compute_torque_stats(max_linear_vel, inputs)
 
     % Kinematics (scotch-yoke)
     theta_dot = required_theta_dot(max_linear_vel, inputs.Lc, inputs.r_crank); %[rad/s] determine the angular speed from max linear speed
-    [~, linear_vel, linear_accel] = slider_crank_kinematic_fcn(inputs.theta, theta_dot, inputs.Lc, inputs.r_crank); % forward kinematics
+    [~, linear_vel, linear_accel] = slider_crank_kinematic_fcn(inputs.theta, theta_dot, 0, inputs.Lc, inputs.r_crank); % forward kinematics
 
     % Damping force calculation
     damping_force = zeros(size(inputs.theta));

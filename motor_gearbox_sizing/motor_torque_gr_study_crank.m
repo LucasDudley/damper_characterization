@@ -19,11 +19,12 @@ inputs.Lc = 6; %[in]
 % kinematics
 r_crank = inputs.stroke / 2; %determine required radius
 theta_dot = required_theta_dot(inputs.max_linear_vel, inputs.Lc, r_crank); %[rad/s] determine the angular speed from max linear speed
-[linear_disp, linear_vel, linear_accel] = slider_crank_kinematic_fcn(inputs.theta, theta_dot, inputs.Lc, r_crank); % forward kinematics
+[linear_disp, linear_vel, linear_accel] = slider_crank_kinematic_fcn(inputs.theta, theta_dot, 0 , inputs.Lc, r_crank); % forward kinematics
 
 % extract maximum displacement and maximium damper velocity
 [disp_max, i_disp] = max(linear_disp);
 [vel_max, i_vel] = max(linear_vel);
+[accel_max, i_accel] = max(linear_accel);
 
 % torque calcs
 damping_force = zeros(size(inputs.theta));
@@ -46,32 +47,60 @@ Tp_crank_rms = sqrt(mean(Tp_crank.^2));
 %%
 % plot kinematics
 figure
-yyaxis left
-plot(inputs.theta, linear_disp, 'LineWidth', 1.5)
-ylabel('Linear Disp. [in]')
+
+c_disp  = [0 0.4470 0.7410];   % blue
+c_vel   = [0.8500 0.3250 0.0980]; % orange
+c_accel = [0.4660 0.6740 0.1880]; % green
+
+sgtitle(sprintf('Slider-Crank Kinematics (R = %.2f in, L_c = %.2f in)', r_crank, inputs.Lc))
+
+% disp
+subplot(3,1,1)
+plot(inputs.theta, linear_disp, 'Color', c_disp, 'LineWidth', 1.5)
+ylabel('Disp. [in]')
+grid on
 hold on
-plot(inputs.theta(i_disp), disp_max, 'ko', 'MarkerFaceColor','k')
+plot(inputs.theta(i_disp), disp_max, 'ko','MarkerFaceColor','k')
 text(inputs.theta(i_disp), disp_max, ...
-    sprintf('  Max = %.2f in', disp_max), 'VerticalAlignment','bottom')
+    sprintf('  Max = %.2f in', disp_max), ...
+    'VerticalAlignment','bottom', 'Color', c_disp)
+box off
 
-yyaxis right
-plot(inputs.theta, linear_vel, 'LineWidth', 1.5)
-ylabel('Linear Vel. [in/s]')
-plot(inputs.theta(i_vel), vel_max, 'ko', 'MarkerFaceColor','k')
+% vel
+subplot(3,1,2)
+plot(inputs.theta, linear_vel, 'Color', c_vel, 'LineWidth', 1.5)
+ylabel('Vel. [in/s]')
+grid on
+hold on
+plot(inputs.theta(i_vel), vel_max, 'ko','MarkerFaceColor','k')
 text(inputs.theta(i_vel), vel_max, ...
-    sprintf('  Max = %.2f in/s', vel_max), 'VerticalAlignment','bottom')
+    sprintf('  Max = %.2f in/s', vel_max), ...
+    'VerticalAlignment','bottom', 'Color', c_vel)
+box off
 
+% accel
+subplot(3,1,3)
+plot(inputs.theta, linear_accel, 'Color', c_accel, 'LineWidth', 1.5)
+ylabel('Accel. [in/s^2]')
 xlabel('\theta [rad]')
 grid on
+hold on
+plot(inputs.theta(i_accel), accel_max, 'ko','MarkerFaceColor','k')
+text(inputs.theta(i_accel), accel_max, ...
+    sprintf('  Max = %.2f in/s^2', accel_max), ...
+    'VerticalAlignment','bottom', 'Color', c_accel)
 box off
+
+
+
 
 % plot forces vs theta
 figure
-plot(inputs.theta, inertial_force, 'LineWidth', 1.5)
+plot(inputs.theta, inertial_force, 'LineWidth', 1)
 hold on
-plot(inputs.theta, gravity_force, 'LineWidth', 1.5)
-plot(inputs.theta, damping_force, 'LineWidth', 1.5)
-plot(inputs.theta, net_force, 'k', 'LineWidth', 2)
+plot(inputs.theta, gravity_force, 'LineWidth', 1)
+plot(inputs.theta, damping_force, 'LineWidth', 1)
+plot(inputs.theta, net_force, 'k', 'LineWidth', 1)
 
 xlabel('\theta [rad]')
 ylabel('Force [lbf]')
