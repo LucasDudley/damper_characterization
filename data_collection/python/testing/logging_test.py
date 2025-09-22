@@ -131,10 +131,11 @@ def quit_program():
     running = False      # stop DAQ thread
     root.destroy()       # close Tkinter window
 
-tk.Button(control_frame, text="Quit", command=quit_program).pack(side=tk.LEFT, padx=5)
-tk.Button(control_frame, text="Start", command=start_logging).pack(side=tk.LEFT, padx=5)
-tk.Button(control_frame, text="Stop", command=stop_logging).pack(side=tk.LEFT, padx=5)
-tk.Checkbutton(control_frame, text="Log to CSV", variable=log_to_csv).pack(side=tk.LEFT, padx=5)
+tk.Button(control_frame, text="Start", command=start_logging, width=12, height=2).pack(side=tk.LEFT, padx=5)
+tk.Button(control_frame, text="Stop", command=stop_logging, width=12, height=2).pack(side=tk.LEFT, padx=5)
+tk.Button(control_frame, text="Quit", command=quit_program, width=12, height=2).pack(side=tk.LEFT, padx=5)
+tk.Checkbutton(control_frame, text="Log to CSV", variable=log_to_csv, width=12, height=2).pack(side=tk.LEFT, padx=5)
+
 
 # RUN GUI
 root.mainloop()
