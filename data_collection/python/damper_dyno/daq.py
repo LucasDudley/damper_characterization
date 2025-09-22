@@ -84,7 +84,11 @@ class DAQController:
     def stop_analog_acquisition(self):
         self.running = False
         if self.ai_task:
-            self.ai_task.stop()
-            self.ai_task.close()
+            try:
+                self.ai_task.stop()
+                self.ai_task.close()
+            except Exception as e:
+                print(f"DAQ stop warning: {e}")
             self.ai_task = None
+
 
