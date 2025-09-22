@@ -36,9 +36,9 @@ def setup_daq_task():
             f"{DEVICE_NAME}/{ch}",
             terminal_config=TerminalConfiguration.RSE
         )
-    task.timing.cfg_samp_clk_timing(
-        rate=SAMPLE_RATE,
-        sample_mode=AcquisitionType.CONTINUOUS
+        task.timing.cfg_samp_clk_timing(
+            rate=SAMPLE_RATE,
+            sample_mode=AcquisitionType.CONTINUOUS
     )
     return task
 

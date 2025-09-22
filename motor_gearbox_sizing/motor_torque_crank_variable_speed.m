@@ -20,7 +20,6 @@ inputs.Lc = 6; %[in]
 inputs.r_crank = inputs.stroke / 2;
 inputs.theta = linspace(0, 4*pi, 500); %[rad]
 
-
 %% Preallocate results
 crank_torque_rms   = zeros(size(inputs.max_linear_vel_range));
 crank_torque_peak  = zeros(size(inputs.max_linear_vel_range));

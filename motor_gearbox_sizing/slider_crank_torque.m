@@ -24,8 +24,6 @@ function T = slider_crank_torque(theta, F_slider, R, Lc)
 
     %Compute crank torque
     % T = F_slider * R * sin(theta + phi) / cos(phi)
-    %   - numerator projects force onto crank lever arm
-    %   - denominator accounts for rod angle amplification
     T = F_slider .* R .* sin(theta + phi) ./ cos(phi);
 
 end

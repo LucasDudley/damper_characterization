@@ -1,3 +1,4 @@
 {
-    "python-envs.pythonProjects": []
+    "python.terminal.launchArgs": [],
+    "python.defaultInterpreterPath": "python/ame441_venv/Scripts/python.exe"
 }

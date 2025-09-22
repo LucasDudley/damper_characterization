@@ -1,7 +1,7 @@
 function damping_force = ohlins_damper_model(lsc_setting, hsc_setting, lsr_setting, hsr_setting, velocity)
 %This Fuctions takes in the current LS and HS setting for comp and rebound,
 %then checks the velocity direction, linearly interpolates to find the
-%correspond force and outputs it (2023)
+%correspond force and outputs it
 
 %NOTE:
 %LS is measured in clicks from closed, fully CW (max damping) and HS in measured in
