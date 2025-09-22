@@ -1,55 +1,74 @@
 import tkinter as tk
 from plots import RealTimePlot
 import threading
+from tkinter import font
 
 class DamperDynoGUI(tk.Tk):
     def __init__(self, TestManager):
-        # Initialize the base Tkinter window
         super().__init__()
-        self.test_manager = TestManager     # Store reference to the TestManager instance
-        self.title("Damper Dyno")           # Set window title
-        self.create_widgets()               # method to build gui widgets
+        self.test_manager = TestManager
+        self.title("Damper Dyno")
+        self.create_widgets()
 
     def create_widgets(self):
-        """Create and arrange GUI components."""
+        """Create and arrange GUI components with bigger buttons and an E-Stop."""
+        # realtime plot
+        self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"])
+        
+        # custom font for bigger buttons
+        btn_font = font.Font(size=12, weight="bold")
 
-        # realtime plot section
-        self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"]) # Create a real-time plot widget
-
-        # Control Frame Section
-        frame = tk.Frame(self)  # Container for control widgets
+        # control frame
+        frame = tk.Frame(self)
         frame.pack(pady=5)
 
         # Speed input
         tk.Label(frame, text="Speed (RPM)").pack(side=tk.LEFT)
-        self.speed_entry = tk.Entry(frame, width=5)  # Entry box for user to input speed
+        self.speed_entry = tk.Entry(frame, width=6)
         self.speed_entry.pack(side=tk.LEFT, padx=5)
 
         # Cycles input
         tk.Label(frame, text="Cycles").pack(side=tk.LEFT)
-        self.cycles_entry = tk.Entry(frame, width=5)  # Entry box for user to input number of cycles
+        self.cycles_entry = tk.Entry(frame, width=6)
         self.cycles_entry.pack(side=tk.LEFT, padx=5)
 
-        # Start button: begins test
-        tk.Button(frame, text="Start", command=self.start_test).pack(side=tk.LEFT, padx=5)
+        # Start button
+        tk.Button(
+            frame, text="Start", font=btn_font, width=8, height=2,
+            bg="green", fg="white", command=self.start_test
+        ).pack(side=tk.LEFT, padx=10)
 
-        # Quit button: closes the GUI
-        tk.Button(frame, text="Quit", command=self.quit).pack(side=tk.LEFT, padx=5)
+        # E-Stop button (bright red)
+        tk.Button(
+            frame, text="E-STOP", font=btn_font, width=8, height=2,
+            bg="red", fg="white", command=self.emergency_stop
+        ).pack(side=tk.LEFT, padx=10)
+
+        # Quit button
+        tk.Button(
+            frame, text="Quit", font=btn_font, width=8, height=2,
+            bg="gray", fg="white", command=self.quit
+        ).pack(side=tk.LEFT, padx=10)
 
     def start_test(self):
         """Retrieve user input and start the test in a separate thread."""
-        # Get user inputs
-        speed = float(self.speed_entry.get())
-        cycles = int(self.cycles_entry.get())
+        try:
+            speed = float(self.speed_entry.get())
+            cycles = int(self.cycles_entry.get())
+        except ValueError:
+            print("Invalid input for speed or cycles.")
+            return
 
-        # pass live plot to the test manager so it can update in real-time
         self.test_manager.realtime_plot = self.realtime_plot
 
-        # run the test in a separate thread (keeps GUI responsive while test runs)
         threading.Thread(
             target=self.test_manager.run_test,
             args=(speed, cycles),
-            daemon=True  # Daemon thread will close automatically when GUI closes
+            daemon=True
         ).start()
 
-
+    def emergency_stop(self):
+        """Stop PWM and data acquisition immediately."""
+        print("⚠ EMERGENCY STOP PRESSED ⚠")
+        # Call the dedicated E-Stop method in the DAQ controller
+        self.test_manager.daq.emergency_stop()

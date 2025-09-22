@@ -10,115 +10,133 @@ class DAQController:
         Initialize the DAQ controller.
         """
         self.device_name = device_name
-        self.ai_task = None             # Task object for analog input acquisition
-        self.pwm_task = None            # Task object for PWM motor control
-        self.running = False            # Flag to indicate if acquisition is running
+        self.ai_task = None
+        self.pwm_task = None
+        self.acquisition_thread = None            # Keep track of the acquisition thread
+        self.stop_event = threading.Event()       # Use an Event for safe thread stopping
 
     # PWM Control
-    def set_motor_pwm(self, duty_cycle: float, frequency=1000):
-        """
-        Configure and start a PWM signal to control a motor.
-        """
-
-        # close existing PWM task before creating a new one
+    def configure_motor_pwm(self, frequency=1000):
         if self.pwm_task:
             self.pwm_task.close()
-
-        # create new counter output task for PWM generation
         self.pwm_task = nidaqmx.Task()
         self.pwm_task.co_channels.add_co_pulse_chan_freq(
-            f"{self.device_name}/ctr0",             # use counter 0 on the device
-            name_to_assign_to_channel="PWM",        # assign name to the channel
-            freq=frequency,                         # set PWM frequency
-            duty_cycle=duty_cycle / 100.0           # convert % duty cycle to 0–1 range
+            f"{self.device_name}/ctr0",
+            name_to_assign_to_channel="PWM",
+            freq=frequency,
+            duty_cycle=1e-4
         )
-        self.pwm_task.start()                       # start PWM output
+        self.pwm_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.CONTINUOUS)
+
+    def start_motor_pwm(self, duty_cycle: float):
+        if self.pwm_task is None:
+            self.configure_motor_pwm()
+        safe_duty = max(min(duty_cycle / 100.0, 0.999999), 1e-6)
+        self.pwm_task.co_channels.all.co_pulse_duty_cyc = safe_duty
+        try:
+            self.pwm_task.start()
+        except nidaqmx.errors.DaqError as e:
+            if "already started" not in str(e):
+                raise
 
     def stop_motor_pwm(self):
-        """Stop and close the PWM task if it exists."""
-        if self.pwm_task:
-            self.pwm_task.stop()
-            self.pwm_task.close()
-            self.pwm_task = None
-
+        if self.pwm_task is not None:
+            try:
+                self.pwm_task.stop()
+                self.pwm_task.close()
+            except Exception as e:
+                print(f"Warning stopping PWM task: {e}")
+            finally:
+                self.pwm_task = None
+    
     # Data Acquisition
+    def _acquisition_callback(self, task_handle, every_n_samples_event_type,
+                              number_of_samples, callback_data):
+        """
+        This function is called by the nidaqmx driver thread when data is ready.
+        """
+        try:
+            # read the available data. The number of samples is provided by the driver.
+            raw_data = self.ai_task.read(number_of_samples_per_channel=number_of_samples)
+            data = np.array(raw_data)
+            if data.ndim == 1:
+                data = data.reshape((1, -1))
+            
+            # Generate timestamps based on the start time and the number of samples acquired so far.
+            times = [
+                self.start_time + datetime.timedelta(seconds=(self.total_samples_acquired + i) / self.sample_rate)
+                for i in range(data.shape[1])
+            ]
+            self.total_samples_acquired += data.shape[1]
+
+            # Pass the accurately timed data to the main application's callback
+            if self.data_callback:
+                self.data_callback(times, data)
+
+            return 0 # Required return value for the callback
+        
+        except Exception as e:
+            print(f"Error in DAQ callback: {e}")
+            return 1 # Indicate an error occurred
+
     def start_acquisition(self, analog_channels, sample_rate, chunk_size, callback):
         """
-        Start continuous acquisition in a separate thread.
-
-        channels (list): List of channel nmes, e.g., ["ai0" "ai1"]
-        sample_rate (float): Samples per second per channel
-        chunk_size (int): Number of samples to read at a time
-        callback (function): Function to call with new data (times, values)
+        Configure and start a hardware-timed, callback-driven acquisition.
         """
-        self.running = True
+        if self.ai_task:
+            print("An acquisition is already running. Stop it first.")
+            return
 
-        # Create and configure an analog input task
-        self.ai_task = nidaqmx.Task()
-        for ch in analog_channels:
-            self.ai_task.ai_channels.add_ai_voltage_chan(
-                f"{self.device_name}/{ch}",                 # Add channel to task
-                terminal_config=TerminalConfiguration.RSE   # Use referenced single-ended mode
+        self.data_callback = callback
+        self.sample_rate = sample_rate
+        self.total_samples_acquired = 0
+        
+        try:
+            self.ai_task = nidaqmx.Task()
+            for ch in analog_channels:
+                self.ai_task.ai_channels.add_ai_voltage_chan(
+                    f"{self.device_name}/{ch}",
+                    terminal_config=TerminalConfiguration.RSE
+                )
+            
+            self.ai_task.timing.cfg_samp_clk_timing(
+                rate=sample_rate,
+                sample_mode=AcquisitionType.CONTINUOUS
+            )
+            
+            # Register our function to be called by the driver.
+            self.ai_task.register_every_n_samples_acquired_into_buffer_event(
+                chunk_size, self._acquisition_callback
             )
 
-        # Configure continuous sampling clock
-        self.ai_task.timing.cfg_samp_clk_timing(
-            rate=sample_rate,
-            sample_mode=AcquisitionType.CONTINUOUS
-        )
-        self.ai_task.start()
+            self.start_time = datetime.datetime.now() # Log the start time
+            self.ai_task.start()
+            print("✅ DAQ acquisition started successfully.")
 
-        # Background acquisition loop
-        def acquire_loop():
-            sample_count = 0
-            start_time = datetime.datetime.now()
-
-            while self.running:
-                try:
-                    available = self.ai_task.in_stream.avail_samp_per_chan # Check how many samples are available
-                    if available == 0:
-                        continue  # no data yet
-
-                    # Read up to chunk_size samples per channel
-                    n_to_read = min(available, chunk_size)
-                    raw_data = self.ai_task.read(number_of_samples_per_channel=n_to_read, timeout=0.1)
-
-                    data = np.array(raw_data) # convert to NumPy array
-                    if data.ndim == 1:
-                        data = data.reshape((1, -1))
-
-                    # generate timestamps for each sample
-                    times = [start_time + datetime.timedelta(seconds=(sample_count + i)/sample_rate)
-                             for i in range(data.shape[1])]
-                    sample_count += data.shape[1]
-
-                    # Truncate in case of mismatch between times and data
-                    n = min(len(times), data.shape[1])
-                    times = times[:n]
-                    values = data[:, :n]
-
-                    # pass data to user-provided callback function
-                    if callback is not None:
-                        callback(times, values)
-
-                except Exception as e:
-                    print(f"DAQ error: {e}")
-                    self.running = False  # stop acquisition loop on error
-                    break
-
-        # Run acquisition loop in a separate thread (non-blocking)
-        threading.Thread(target=acquire_loop, daemon=True).start()
-
+        except Exception as e:
+            print(f"Failed to start DAQ acquisition: {e}")
+            if self.ai_task:
+                self.ai_task.close()
+                self.ai_task = None
+    
     def stop_acquisition(self):
-        """Stop analog acquisition and safely close the task."""
-        self.running = False
+        """Stop DAQ analog acquisition safely."""
         if self.ai_task:
             try:
                 self.ai_task.stop()
+                # Unregistering the event is good practice
+                self.ai_task.register_every_n_samples_acquired_into_buffer_event(0, None)
                 self.ai_task.close()
+                print("🛑 DAQ acquisition stopped.")
             except Exception as e:
-                print(f"DAQ stop warning: {e}")
-            self.ai_task = None
-
-
+                print(f"Warning stopping AI task: {e}")
+            finally:
+                self.ai_task = None
+        self.data_callback = None
+    
+    def emergency_stop(self):
+        """Immediately stops motor and signals acquisition to halt."""
+        print("🚨 DAQ E-STOP 🚨")
+        self.stop_motor_pwm()   # Stop the dangerous part first
+        self.stop_acquisition() # Gracefully stop and clean up the acquisition
 

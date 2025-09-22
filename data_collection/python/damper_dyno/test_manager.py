@@ -17,7 +17,10 @@ class TestManager:
 
         # convert target speed to motor PWM duty cycle
         pwm = convert_speed_to_duty_cycle(target_speed)
-        self.daq.set_motor_pwm(pwm)
+
+        # configure PWM once
+        self.daq.configure_motor_pwm()
+        self.daq.start_motor_pwm(pwm)
 
         # Storage list ([timestamp, AI0, AI1, AI2...])
         data_storage = []
@@ -56,15 +59,13 @@ class TestManager:
 
         # background thread to control test duration
         def test_thread():
-            # compute total test duration in seconds
-            test_duration = num_cycles / target_speed * 60
-
             # wait for test duration to complete
+            test_duration = num_cycles / target_speed * 60
             threading.Event().wait(test_duration)
 
-            # stop data acquisition and motor PWM
-            self.daq.stop_acquisition()
+            # stop PWM but keep task alive in case you want to restart quickly
             self.daq.stop_motor_pwm()
+            self.daq.stop_acquisition()
 
             # save collected data to CSV
             save_test_data(data_storage)
