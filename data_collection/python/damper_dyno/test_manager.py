@@ -1,6 +1,5 @@
 import threading
-from file_io import save_test_data
-from utils import convert_speed_to_duty_cycle
+from utils import convert_speed_to_duty_cycle, save_test_data
 
 class TestManager:
     def __init__(self, daq_controller, realtime_plot=None):

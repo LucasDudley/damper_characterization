@@ -15,21 +15,24 @@ class DamperDynoGUI(tk.Tk):
         # realtime plot
         self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"])
         
-        # custom font for bigger buttons
+        # --- MODIFIED: Created separate fonts for clarity ---
         btn_font = font.Font(size=12, weight="bold")
+        widget_font = font.Font(size=12) # Font for labels and entries
 
         # control frame
         frame = tk.Frame(self)
-        frame.pack(pady=5)
+        frame.pack(pady=10) # Added a little more vertical padding
 
         # Speed input
-        tk.Label(frame, text="Speed (RPM)").pack(side=tk.LEFT)
-        self.speed_entry = tk.Entry(frame, width=6)
+        tk.Label(frame, text="Speed (RPM)", font=widget_font).pack(side=tk.LEFT)
+        # --- MODIFIED: Applied font and increased width ---
+        self.speed_entry = tk.Entry(frame, width=8, font=widget_font)
         self.speed_entry.pack(side=tk.LEFT, padx=5)
 
         # Cycles input
-        tk.Label(frame, text="Cycles").pack(side=tk.LEFT)
-        self.cycles_entry = tk.Entry(frame, width=6)
+        tk.Label(frame, text="Cycles", font=widget_font).pack(side=tk.LEFT, padx=(10, 0)) # Added padding to the left
+        # --- MODIFIED: Applied font and increased width ---
+        self.cycles_entry = tk.Entry(frame, width=8, font=widget_font)
         self.cycles_entry.pack(side=tk.LEFT, padx=5)
 
         # Start button
