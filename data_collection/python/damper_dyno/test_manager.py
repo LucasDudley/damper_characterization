@@ -35,7 +35,7 @@ class TestManager:
 
             # update live plot safely
             if self.live_plot:
-                self.live_plot.update(time_q, data_qs)
+                self.live_plot.update(time_q, data_qs, sample_rate)
 
         self.daq.start_analog_acquisition(
             channels=["ai0","ai1","ai2"],
