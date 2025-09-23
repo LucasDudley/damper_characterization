@@ -1,13 +1,26 @@
 import csv
 import datetime
+from numbers import Number
 
-def save_test_data(data, filename=None):
+def save_test_data(data, filename=None, decimal_places=3):
     """
-    Save test data to CSV. Assumes the first row of 'data' is the header.
+    Save test data to CSV, formatting all numbers to a set number of decimal places.
+    Assumes the first row of 'data' is the header.
     """
-    if not data:
+    if not data or len(data) < 2: # Check if data besides a header
         print("Warning: No data to save.")
         return
+
+    # helper function to format a single row
+    def format_row(row):
+        formatted_row = []
+        for item in row:
+            # Check if the item is a number (int, float, etc.) but not a boolean
+            if isinstance(item, Number) and not isinstance(item, bool):
+                formatted_row.append(f"{item:.{decimal_places}f}")
+            else:
+                formatted_row.append(item)
+        return formatted_row
 
     if filename is None:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -16,7 +29,14 @@ def save_test_data(data, filename=None):
     try:
         with open(filename, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerows(data)
+            
+            # The header is the first row, write it without formatting
+            header = data[0]
+            writer.writerow(header)
+            
+            # --- MODIFIED: Format the rest of the data rows before writing ---
+            data_rows = data[1:]
+            writer.writerows(format_row(row) for row in data_rows)
             
         print(f"Test data successfully saved to {filename}")
 
