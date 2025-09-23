@@ -22,7 +22,7 @@ class TestManager:
 
         # configure PWM once
         self.daq.configure_motor_pwm()
-        self.daq.start_motor_pwm(pwm)
+        self.daq.start_motor(pwm)
 
         # Storage list ([timestamp, AI0, AI1, AI2...])
         data_storage = []
@@ -66,7 +66,7 @@ class TestManager:
             threading.Event().wait(test_duration)
 
             # stop PWM but keep task alive in case you want to restart quickly
-            self.daq.stop_motor_pwm()
+            self.daq.stop_motor()
             self.daq.stop_acquisition()
 
             # save collected data to CSV
