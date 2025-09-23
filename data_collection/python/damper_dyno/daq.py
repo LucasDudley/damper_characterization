@@ -136,7 +136,7 @@ class DAQController:
     
     def emergency_stop(self):
         """Immediately stops motor and signals acquisition to halt."""
-        print("🚨 DAQ E-STOP 🚨")
+        print("⚠ DAQ E-STOP ⚠")
         self.stop_motor_pwm()   # Stop the dangerous part first
         self.stop_acquisition() # Gracefully stop and clean up the acquisition
 

@@ -12,10 +12,8 @@ class DamperDynoGUI(tk.Tk):
 
     def create_widgets(self):
         """Create and arrange GUI components with bigger buttons and an E-Stop."""
-        # realtime plot
-        self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"])
+        self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"]) # realtime plot
         
-        # --- MODIFIED: Created separate fonts for clarity ---
         btn_font = font.Font(size=12, weight="bold")
         widget_font = font.Font(size=12) # Font for labels and entries
 
@@ -25,13 +23,11 @@ class DamperDynoGUI(tk.Tk):
 
         # Speed input
         tk.Label(frame, text="Speed (RPM)", font=widget_font).pack(side=tk.LEFT)
-        # --- MODIFIED: Applied font and increased width ---
         self.speed_entry = tk.Entry(frame, width=8, font=widget_font)
         self.speed_entry.pack(side=tk.LEFT, padx=5)
 
         # Cycles input
         tk.Label(frame, text="Cycles", font=widget_font).pack(side=tk.LEFT, padx=(10, 0)) # Added padding to the left
-        # --- MODIFIED: Applied font and increased width ---
         self.cycles_entry = tk.Entry(frame, width=8, font=widget_font)
         self.cycles_entry.pack(side=tk.LEFT, padx=5)
 
@@ -41,7 +37,7 @@ class DamperDynoGUI(tk.Tk):
             bg="green", fg="white", command=self.start_test
         ).pack(side=tk.LEFT, padx=10)
 
-        # E-Stop button (bright red)
+        # E-Stop button
         tk.Button(
             frame, text="E-STOP", font=btn_font, width=8, height=2,
             bg="red", fg="white", command=self.emergency_stop

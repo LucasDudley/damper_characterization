@@ -13,6 +13,9 @@ class TestManager:
         """
         Run a damper test with specified speed and number of cycles.
         """
+        # reset the realtime plot if rerunning test
+        if self.realtime_plot:
+            self.realtime_plot.reset()
 
         # convert target speed to motor PWM duty cycle
         pwm = convert_speed_to_duty_cycle(target_speed)

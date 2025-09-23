@@ -20,7 +20,7 @@ class RealTimePlot:
         self.ax.set_ylim(*y_range)
         self.ax.set_xlabel("Time")
         self.ax.set_ylabel("Voltage (V)")
-        self.ax.legend()
+        self.ax.legend(loc='upper right')
         self.ax.grid()
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         self.canvas = FigureCanvasTkAgg(self.fig, master=master)
@@ -68,6 +68,23 @@ class RealTimePlot:
         self.ax.set_xlim(xdata[0], xdata[-1])
         self.canvas.draw_idle()
         self.last_idx = new_idx
+
+        # In your RealTimePlot class
+
+    def reset(self):
+        """
+        Resets the plot for a new test run by clearing all line data
+        and resetting the internal index.
+        """
+        # Reset the index that tracks plotted data
+        self.last_idx = 0
+        
+        # Clear the data from each line on the plot
+        for line in self.lines:
+            line.set_data([], [])
+            
+        # Redraw the empty canvas
+        self.canvas.draw_idle()
 
 
 
