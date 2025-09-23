@@ -6,7 +6,7 @@ import datetime
 
 class RealTimePlot:
     def __init__(self, master, signal_names, y_label="Values", y_range=(-100, 100),
-                 figsize=(12,6), x_window=3, plot_freq=5):
+                 figsize=(10,8), x_window=3, plot_freq=5):
         
         self.fig, self.ax = plt.subplots(figsize=figsize)
         self.lines = [self.ax.plot([], [], label=name)[0] for name in signal_names]
@@ -24,11 +24,7 @@ class RealTimePlot:
         self.last_idx = 0
 
     def update(self, time_q, data_qs, sample_rate):
-        """
-        time_q       : list of datetime timestamps
-        data_qs      : list of lists of data per channel
-        sample_rate  : DAQ samples per second
-        """
+
         if not time_q:
             return
 

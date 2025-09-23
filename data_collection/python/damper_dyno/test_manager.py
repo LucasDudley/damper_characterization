@@ -13,74 +13,86 @@ class TestManager:
         Initialize the TestManager.
         """
         self.daq = daq_controller
-        self.realtime_plot = realtime_plot
+        
+        self.force_plot = None
+        self.disp_plot = None
+        self.temp_var = None # This will hold the tk.StringVar
 
         self.signal_config = {
-            # DAQ Channel: (Signal Name, Units, Mapping Function)
             "ai0": ("Force", "N", map_voltage_to_force),
             "ai1": ("Displacement", "mm", map_voltage_to_displacement),
             "ai2": ("Temperature", "°C", map_voltage_to_temperature),
         }
-        # Ordered list of channels for consistent data processing
         self.channels = ["ai0", "ai1", "ai2"]
 
     def run_test(self, target_speed, num_cycles, sample_rate=300, chunk_size=100):
-        """
-        Run a damper test with specified speed and number of cycles.
-        """
-        # reset the realtime plot if rerunning test
-        if self.realtime_plot:
-            self.realtime_plot.reset()
+        # --- MODIFIED: Reset both plots before starting ---
+        if self.force_plot:
+            self.force_plot.reset()
+        if self.disp_plot:
+            self.disp_plot.reset()
 
+        # ... (code for PWM setup is unchanged) ...
         pwm = convert_speed_to_duty_cycle(target_speed)
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
-        # Create headers for the CSV file
+        # Setup for data logging (this part is still correct)
         headers = ["Timestamp"]
         for ch in self.channels:
             name, units, _ = self.signal_config[ch]
             headers.append(f"{name}_Voltage (V)")
             headers.append(f"{name} ({units})")
+        data_storage = [headers]
 
-        # Storage list ([timestamp, AI0, AI1, AI2...])
-        data_storage = []
+        # --- MODIFIED: Separate queues for each plot ---
+        time_q = []
+        force_q = []
+        disp_q = []
 
-        # Queues for real-time plotting
-        time_q = []                         # Stores timestamps
-        mapped_data_qs = [[] for _ in self.channels]
-
-        # callback function executed every time new data is read from DAQ
+        # The callback function with the new data routing logic
         def callback(times, raw_values):
             n = min(len(times), raw_values.shape[1])
             times = times[:n]
             raw_values = raw_values[:, :n]
 
-            # map raw voltages to physical values
+            # Map raw voltages to physical values (unchanged)
             mapped_values = []
             for i, ch in enumerate(self.channels):
                 mapping_func = self.signal_config[ch][2]
                 mapped_channel_data = [mapping_func(v) for v in raw_values[i]]
                 mapped_values.append(mapped_channel_data)
 
-            # store raw and mapped data for CSV export
+            # Data logging to data_storage
             for i in range(n):
                 row = [times[i]]
                 for ch_idx in range(len(self.channels)):
-                    row.append(raw_values[ch_idx][i])   # Append raw voltage
-                    row.append(mapped_values[ch_idx][i]) # Append mapped value
+                    row.append(raw_values[ch_idx][i])
+                    row.append(mapped_values[ch_idx][i])
                 data_storage.append(row)
 
-            # Update queues with MAPPED data for plotting
+            # split data for different destinations
+            force_data = mapped_values[0]   # Data from ai0
+            disp_data = mapped_values[1]    # Data from ai1
+            temp_data = mapped_values[2]    # Data from ai2
+
+            # update the separate queues for plotting
             time_q.extend(times)
-            for dq, mapped_data in zip(mapped_data_qs, mapped_values):
-                dq.extend(mapped_data)
+            force_q.extend(force_data)
+            disp_q.extend(disp_data)
 
-            # update live plot with latest MAPPED data
-            if self.realtime_plot:
-                # Pass the mapped data queues to the plot
-                self.realtime_plot.update(time_q, mapped_data_qs, sample_rate)
+            if self.force_plot:
+                self.force_plot.update(time_q, [force_q], sample_rate)
+            
+            if self.disp_plot:
+                self.disp_plot.update(time_q, [disp_q], sample_rate)
 
+            # Update digital readout using the thread-safe StringVar
+            if self.temp_var and temp_data:
+                latest_temp = temp_data[-1] # Get the most recent temp value
+                self.temp_var.set(f"{latest_temp:.1f} °C")
+
+        # Start acquisition (unchanged)
         self.daq.start_acquisition(
             analog_channels=self.channels,
             sample_rate=sample_rate,

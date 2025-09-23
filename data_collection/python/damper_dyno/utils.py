@@ -49,30 +49,23 @@ def convert_speed_to_duty_cycle(speed_rpm, rpm_range=[0, 100], duty_cycle_range=
 def map_voltage_to_force(voltage):
     """
     Maps voltage from a load cell to force in Newtons.
-    Replace these values with your actual calibration constants.
-    Example: A sensor that outputs 0V at 0N and 5V at 1000N.
     """
-    slope = 200  # Newtons per Volt (1000N / 5V)
-    offset = 0   # Force at 0V
+    slope = 392.5 #N/V
+    offset = 0
     return (voltage * slope) + offset
 
 def map_voltage_to_displacement(voltage):
     """
     Maps voltage from a displacement sensor to millimeters.
-    Replace these values with your actual calibration constants.
-    Example: A sensor that outputs 1V at -50mm and 4V at +50mm.
     """
-    # V = m*D + c  => D = (V-c)/m
-    slope = 33.33  # mm per Volt (100mm / 3V)
-    offset = -83.33 # Displacement at 0V
+    slope = 10 #mm/V
+    offset = 0
     return (voltage * slope) + offset
 
 def map_voltage_to_temperature(voltage):
     """
     Maps voltage from a temperature sensor to Celsius.
-    Replace these values with your actual calibration constants.
-    Example: A sensor that outputs 0.1V at 0°C and 1.9V at 180°C.
     """
-    slope = 100  # °C per Volt (180°C / 1.8V)
-    offset = -10 # Temperature at 0V
+    slope = 40 #C/V
+    offset = 0
     return (voltage * slope) + offset
