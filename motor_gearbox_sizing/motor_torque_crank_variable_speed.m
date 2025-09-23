@@ -12,7 +12,7 @@ set(groot, 'DefaultTextFontName', 'Times New Roman')
 %% Inputs
 inputs.max_linear_vel_range = linspace(0.5, 6, 10); %[in/s]
 inputs.stroke = 1.5; %[in]
-inputs.gear_ratio = 10; %[motor/crank]
+inputs.gear_ratio = 1; %[motor/crank]
 inputs.mass = (2) / 32.17; %[slugs]
 inputs.Lc = 6; %[in]
 
@@ -28,6 +28,7 @@ motor_torque_peak  = zeros(size(inputs.max_linear_vel_range));
 motor_rpm          = zeros(size(inputs.max_linear_vel_range));
 motor_power_rms    = zeros(size(inputs.max_linear_vel_range));
 motor_power_peak   = zeros(size(inputs.max_linear_vel_range));
+rod_force_peak     = zeros(size(inputs.max_linear_vel_range));
 
 %% Compute torque/power stats
 torque_stats = arrayfun(@(v) compute_torque_stats(v, inputs), ...
@@ -42,6 +43,7 @@ for k = 1:numel(torque_stats)
     motor_rpm(k)          = torque_stats{k}.rpm;
     motor_power_rms(k)    = torque_stats{k}.power_rms;
     motor_power_peak(k)   = torque_stats{k}.power_peak;
+    rod_force_peak(k)     = torque_stats{k}.rod_force_peak;
 end
 
 %% Helper function
@@ -63,11 +65,12 @@ function stats = compute_torque_stats(max_linear_vel, inputs)
     net_force = damping_force + gravity_force + inertial_force;
 
     % Crank torque
-    crank_torque = slider_crank_torque(inputs.theta, net_force, inputs.r_crank, inputs.Lc);
+    [crank_torque, ~, F_rod] = slider_crank_torque(inputs.theta, net_force, inputs.r_crank, inputs.Lc);
 
     % Stats
     stats.crank_peak = max(abs(crank_torque));
     stats.crank_rms  = sqrt(mean(crank_torque.^2));
+    stats.rod_force_peak  = max(abs(F_rod));
 
     % Motor conversion
     motor_speed      = theta_dot * inputs.gear_ratio; %[rad/s]
@@ -131,3 +134,6 @@ filename = fullfile('G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCF
 % save as png and pdf
 exportgraphics(gcf, [filename '.pdf'], 'ContentType','vector', 'BackgroundColor','none');
 
+%%
+figure
+plot(inputs.max_linear_vel_range, rod_force_peak,'-o','LineWidth',1.5)

@@ -38,7 +38,7 @@ inertial_force = linear_accel * inputs.mass;
 gravity_force = inputs.mass * 32.17 * ones(size(inputs.theta));
 net_force = damping_force + gravity_force + inertial_force;
 
-Tp_crank = slider_crank_torque(inputs.theta, net_force, r_crank, inputs.Lc); % [lbf*in] crank toque required
+[Tp_crank, ~, F_rod] = slider_crank_torque(inputs.theta, net_force, r_crank, inputs.Lc); % [lbf*in] crank toque required
 
 % calcualte the peak and RMS torque required
 [Tp_crank_max, i_Tp_crank] = max(abs(Tp_crank));
@@ -101,10 +101,11 @@ hold on
 plot(inputs.theta, gravity_force, 'LineWidth', 1)
 plot(inputs.theta, damping_force, 'LineWidth', 1)
 plot(inputs.theta, net_force, 'k', 'LineWidth', 1)
+plot(inputs.theta, F_rod, 'k', 'LineWidth', 1)
 
 xlabel('\theta [rad]')
 ylabel('Force [lbf]')
-legend('Inertial Force', 'Gravity Force', 'Damping Force', 'Net Force', ...
+legend('Inertial Force', 'Gravity Force', 'Damping Force', 'Net Force', 'F_rod', ...
        'Location','best')
 grid on
 box off
