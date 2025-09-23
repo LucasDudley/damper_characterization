@@ -9,17 +9,21 @@ class DAQController:
         """
         Initialize the DAQ controller.
         """
+        # initalization
         self.device_name = device_name
         self.ai_task = None
         self.pwm_task = None
         self.do_task = None
         self.acquisition_thread = None            # Keep track of the acquisition thread
         self.stop_event = threading.Event()       # Use an Event for safe thread stopping
+
+        # Ouput Pin Configuration
         self.motor_enable_pin = f"{self.device_name}/port1/line1"
         self.pwm_output_pin = f"{self.device_name}/ctr0"
 
     def enable_motor(self):
         """Creates a digital output task and sets the enable pin to HIGH."""
+        
         if self.do_task:
             self.do_task.close() # Close previous task just in case left open
 
@@ -74,6 +78,8 @@ class DAQController:
                 raise
 
     def stop_motor(self):
+        self.disable_motor() # disable motor after stopping PWM
+        
         if self.pwm_task is not None:
             try:
                 self.pwm_task.stop()
@@ -83,7 +89,6 @@ class DAQController:
             finally:
                 self.pwm_task = None
 
-        self.disable_motor() # disable motor after stopping PWM
     
     # Data Acquisition
     def _acquisition_callback(self, task_handle, every_n_samples_event_type,
@@ -147,7 +152,7 @@ class DAQController:
 
             self.start_time = datetime.datetime.now() # Log the start time
             self.ai_task.start()
-            print("✅ DAQ acquisition started successfully.")
+            print("DAQ acquisition started successfully.")
 
         except Exception as e:
             print(f"Failed to start DAQ acquisition: {e}")
@@ -163,7 +168,7 @@ class DAQController:
                 # Unregistering the event is good practice
                 self.ai_task.register_every_n_samples_acquired_into_buffer_event(0, None)
                 self.ai_task.close()
-                print("🛑 DAQ acquisition stopped.")
+                print("DAQ acquisition stopped.")
             except Exception as e:
                 print(f"Warning stopping AI task: {e}")
             finally:

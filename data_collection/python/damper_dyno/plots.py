@@ -5,21 +5,14 @@ import datetime
 
 
 class RealTimePlot:
-    def __init__(self, master, channels=["AI0","AI1","AI2"], figsize=(12,6),
-                 y_range=(0,5), x_window=3, plot_freq=5):
-        """
-        master     : Tkinter root or frame
-        channels   : list of channel names
-        figsize    : matplotlib figure size
-        y_range    : (min, max) y-axis limits
-        x_window   : seconds of data to display
-        plot_freq  : Hz at which to update the plot
-        """
+    def __init__(self, master, signal_names, y_label="Values", y_range=(-100, 100),
+                 figsize=(12,6), x_window=3, plot_freq=5):
+        
         self.fig, self.ax = plt.subplots(figsize=figsize)
-        self.lines = [self.ax.plot([], [], label=ch)[0] for ch in channels]
+        self.lines = [self.ax.plot([], [], label=name)[0] for name in signal_names]
         self.ax.set_ylim(*y_range)
         self.ax.set_xlabel("Time")
-        self.ax.set_ylabel("Voltage (V)")
+        self.ax.set_ylabel(y_label)
         self.ax.legend(loc='upper right')
         self.ax.grid()
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))

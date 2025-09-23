@@ -4,49 +4,62 @@ import threading
 from tkinter import font
 
 class DamperDynoGUI(tk.Tk):
-    def __init__(self, TestManager):
+    def __init__(self, test_manager): # Corrected the argument name for clarity
         super().__init__()
-        self.test_manager = TestManager
+        self.test_manager = test_manager
         self.title("Damper Dyno")
         self.create_widgets()
 
     def create_widgets(self):
-        """Create and arrange GUI components with bigger buttons and an E-Stop."""
-        self.realtime_plot = RealTimePlot(self, channels=["AI0", "AI1", "AI2"]) # realtime plot
-        
-        btn_font = font.Font(size=12, weight="bold")
-        widget_font = font.Font(size=12) # Font for labels and entries
+        """Create and arrange GUI components."""
+        # Create a frame for the plot
+        plot_frame = tk.Frame(self)
+        plot_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # control frame
-        frame = tk.Frame(self)
-        frame.pack(pady=10) # Added a little more vertical padding
+        signal_names = [self.test_manager.signal_config[ch][0] for ch in self.test_manager.channels]
+        
+        # Link the plot to the test manager
+        self.realtime_plot = RealTimePlot(
+            master=plot_frame,
+            signal_names=signal_names,
+            y_label="Force (N) / Displacement (mm)",
+            y_range=(-150, 150)
+        )
+        self.test_manager.realtime_plot = self.realtime_plot
+
+        btn_font = font.Font(size=12, weight="bold")
+        widget_font = font.Font(size=12)
+
+        # Control frame
+        control_frame = tk.Frame(self)
+        control_frame.pack(pady=10, padx=10, fill="x")
 
         # Speed input
-        tk.Label(frame, text="Speed (RPM)", font=widget_font).pack(side=tk.LEFT)
-        self.speed_entry = tk.Entry(frame, width=8, font=widget_font)
+        tk.Label(control_frame, text="Speed (RPM)", font=widget_font).pack(side=tk.LEFT)
+        self.speed_entry = tk.Entry(control_frame, width=8, font=widget_font)
         self.speed_entry.pack(side=tk.LEFT, padx=5)
 
         # Cycles input
-        tk.Label(frame, text="Cycles", font=widget_font).pack(side=tk.LEFT, padx=(10, 0)) # Added padding to the left
-        self.cycles_entry = tk.Entry(frame, width=8, font=widget_font)
+        tk.Label(control_frame, text="Cycles", font=widget_font).pack(side=tk.LEFT, padx=(10, 0))
+        self.cycles_entry = tk.Entry(control_frame, width=8, font=widget_font)
         self.cycles_entry.pack(side=tk.LEFT, padx=5)
 
         # Start button
         tk.Button(
-            frame, text="Start", font=btn_font, width=8, height=2,
+            control_frame, text="Start", font=btn_font, width=8, height=2,
             bg="green", fg="white", command=self.start_test
         ).pack(side=tk.LEFT, padx=10)
 
         # E-Stop button
         tk.Button(
-            frame, text="E-STOP", font=btn_font, width=8, height=2,
+            control_frame, text="E-STOP", font=btn_font, width=8, height=2,
             bg="red", fg="white", command=self.emergency_stop
         ).pack(side=tk.LEFT, padx=10)
 
         # Quit button
         tk.Button(
-            frame, text="Quit", font=btn_font, width=8, height=2,
-            bg="gray", fg="white", command=self.quit
+            control_frame, text="Quit", font=btn_font, width=8, height=2,
+            bg="gray", fg="white", command=self.destroy # Use self.destroy for clean exit
         ).pack(side=tk.LEFT, padx=10)
 
     def start_test(self):
@@ -57,8 +70,6 @@ class DamperDynoGUI(tk.Tk):
         except ValueError:
             print("Invalid input for speed or cycles.")
             return
-
-        self.test_manager.realtime_plot = self.realtime_plot
 
         threading.Thread(
             target=self.test_manager.run_test,

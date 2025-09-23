@@ -3,22 +3,26 @@ import datetime
 
 def save_test_data(data, filename=None):
     """
-    Save test data to CSV. If filename is None, generate one using current date and time.
+    Save test data to CSV. Assumes the first row of 'data' is the header.
     """
+    if not data:
+        print("Warning: No data to save.")
+        return
 
-    # If no filename is provided, create one with the current date and time
     if filename is None:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"damper_test_{timestamp}.csv"
 
-    # create the file in write mode
-    with open(filename, "w", newline="") as f:
-        writer = csv.writer(f)
+    try:
+        with open(filename, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+            
+        print(f"Test data successfully saved to {filename}")
 
-        # Write all rows of data to the CSV file
-        writer.writerow(["Timestamp", "Force", "Displacement", "Temperature"])
-        writer.writerows(data)
-        
+    except IOError as e:
+        print(f"Error saving data to {filename}: {e}")
+
 def convert_speed_to_duty_cycle(speed_rpm, rpm_range=[0, 100], duty_cycle_range=[10, 90]):
     """
     Convert a angular_speed in RPM to PWM duty cycle (%) using linear interpolation.
@@ -42,4 +46,33 @@ def convert_speed_to_duty_cycle(speed_rpm, rpm_range=[0, 100], duty_cycle_range=
     # Clip to duty cycle range
     return max(min(duty_cycle, duty_cycle_range[1]), duty_cycle_range[0])
 
+def map_voltage_to_force(voltage):
+    """
+    Maps voltage from a load cell to force in Newtons.
+    Replace these values with your actual calibration constants.
+    Example: A sensor that outputs 0V at 0N and 5V at 1000N.
+    """
+    slope = 200  # Newtons per Volt (1000N / 5V)
+    offset = 0   # Force at 0V
+    return (voltage * slope) + offset
 
+def map_voltage_to_displacement(voltage):
+    """
+    Maps voltage from a displacement sensor to millimeters.
+    Replace these values with your actual calibration constants.
+    Example: A sensor that outputs 1V at -50mm and 4V at +50mm.
+    """
+    # V = m*D + c  => D = (V-c)/m
+    slope = 33.33  # mm per Volt (100mm / 3V)
+    offset = -83.33 # Displacement at 0V
+    return (voltage * slope) + offset
+
+def map_voltage_to_temperature(voltage):
+    """
+    Maps voltage from a temperature sensor to Celsius.
+    Replace these values with your actual calibration constants.
+    Example: A sensor that outputs 0.1V at 0°C and 1.9V at 180°C.
+    """
+    slope = 100  # °C per Volt (180°C / 1.8V)
+    offset = -10 # Temperature at 0V
+    return (voltage * slope) + offset
