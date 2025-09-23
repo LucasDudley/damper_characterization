@@ -12,6 +12,12 @@ class DamperDynoGUI(tk.Tk):
         self.widget_font = font.Font(size=20)
         self.create_widgets()
 
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        """Handles the application shutdown sequence."""
+        self.test_manager.daq.close()
+        self.destroy()
 
     def create_widgets(self):
         """Create and arrange GUI components with two plots and a digital readout."""

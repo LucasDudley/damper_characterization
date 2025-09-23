@@ -21,7 +21,7 @@ class TestManager:
         self.signal_config = {
             "ai0": ("Force", "N", map_voltage_to_force),
             "ai1": ("Displacement", "mm", map_voltage_to_displacement),
-            "ai2": ("Temperature", "°C", map_voltage_to_temperature),
+            "ai2": ("Temperature", "C", map_voltage_to_temperature),
         }
         self.channels = ["ai0", "ai1", "ai2"]
 

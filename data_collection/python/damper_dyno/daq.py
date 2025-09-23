@@ -79,7 +79,7 @@ class DAQController:
 
     def stop_motor(self):
         self.disable_motor() # disable motor after stopping PWM
-        
+
         if self.pwm_task is not None:
             try:
                 self.pwm_task.stop()
@@ -175,6 +175,13 @@ class DAQController:
                 self.ai_task = None
         self.data_callback = None
     
+    def close(self):
+        """Safely stop and close all active NI-DAQmx tasks."""
+        # Stop all hardware operations first
+        self.stop_motor()
+        self.stop_acquisition()
+
+
     def emergency_stop(self):
         """Immediately stops motor and signals acquisition to halt."""
         print("⚠ DAQ E-STOP ⚠")
