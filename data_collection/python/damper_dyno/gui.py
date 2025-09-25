@@ -18,8 +18,6 @@ class DamperDynoGUI(tk.Tk):
 
     def on_closing(self):
         """Handles the complete application shutdown sequence."""
-        print("Shutdown sequence initiated...")
-        plt.close('all')
         self.test_manager.daq.close()
         self.destroy()
 
