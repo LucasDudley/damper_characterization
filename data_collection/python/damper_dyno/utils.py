@@ -34,7 +34,7 @@ def save_test_data(data, filename=None, decimal_places=3):
             header = data[0]
             writer.writerow(header)
             
-            # --- MODIFIED: Format the rest of the data rows before writing ---
+            # format the rest of the data rows before writing
             data_rows = data[1:]
             writer.writerows(format_row(row) for row in data_rows)
             
