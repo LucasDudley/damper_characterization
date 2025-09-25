@@ -26,18 +26,17 @@ class TestManager:
         self.channels = ["ai0", "ai1", "ai2"]
 
     def run_test(self, target_speed, num_cycles, sample_rate=300, chunk_size=100):
-        # --- MODIFIED: Reset both plots before starting ---
+        # Reset both plots before starting
         if self.force_plot:
             self.force_plot.reset()
         if self.disp_plot:
             self.disp_plot.reset()
 
-        # ... (code for PWM setup is unchanged) ...
         pwm = convert_speed_to_duty_cycle(target_speed)
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
-        # Setup for data logging (this part is still correct)
+        # Setup for data logging
         headers = ["Timestamp"]
         for ch in self.channels:
             name, units, _ = self.signal_config[ch]
@@ -45,7 +44,7 @@ class TestManager:
             headers.append(f"{name} ({units})")
         data_storage = [headers]
 
-        # --- MODIFIED: Separate queues for each plot ---
+        # Separate queues for each plot
         time_q = []
         force_q = []
         disp_q = []
@@ -56,7 +55,7 @@ class TestManager:
             times = times[:n]
             raw_values = raw_values[:, :n]
 
-            # Map raw voltages to physical values (unchanged)
+            # Map raw voltages to physical values
             mapped_values = []
             for i, ch in enumerate(self.channels):
                 mapping_func = self.signal_config[ch][2]
@@ -92,7 +91,7 @@ class TestManager:
                 latest_temp = temp_data[-1] # Get the most recent temp value
                 self.temp_var.set(f"{latest_temp:.1f} °C")
 
-        # Start acquisition (unchanged)
+        # Start acquisition
         self.daq.start_acquisition(
             analog_channels=self.channels,
             sample_rate=sample_rate,

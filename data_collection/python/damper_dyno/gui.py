@@ -44,18 +44,18 @@ class DamperDynoGUI(tk.Tk):
     def _create_dyno_tab(self, parent_tab):
         """Populates the 'Live Dyno' tab with all the controls and plots."""
         
-        # Main frame to hold both plots
+        # main frame to hold both plots
         plots_frame = tk.Frame(parent_tab)
         plots_frame.pack(fill="both", expand=True, padx=10, pady=(10, 0))
 
-        # Create plot frames
+        # create plot frames
         left_plot_frame = tk.Frame(plots_frame)
         left_plot_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 5))
 
         right_plot_frame = tk.Frame(plots_frame)
         right_plot_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=(5, 0))
 
-        # Force plot
+        # force plot
         self.force_plot = RealTimePlot(
             master=left_plot_frame,
             signal_names=["Force"],
@@ -63,7 +63,7 @@ class DamperDynoGUI(tk.Tk):
             y_range=(-1000, 1000)
         )
 
-        # Displacement plot
+        # displacement plot
         self.disp_plot = RealTimePlot(
             master=right_plot_frame,
             signal_names=["Displacement"],
@@ -71,7 +71,7 @@ class DamperDynoGUI(tk.Tk):
             y_range=(0, 50)
         )
         
-        # Frame for digital readouts
+        # frame for digital readouts
         readouts_frame = tk.Frame(parent_tab)
         readouts_frame.pack(fill="x", padx=10, pady=5)
         tk.Label(readouts_frame, text="Temperature:", font=("Helvetica", 20)).pack(side=tk.LEFT, padx=5)
@@ -80,16 +80,15 @@ class DamperDynoGUI(tk.Tk):
         temp_label = tk.Label(readouts_frame, textvariable=self.temp_var, font=self.btn_font)
         temp_label.pack(side=tk.LEFT, padx=5)
 
-        # Attach to task_runner
+        # attach to test_manager
         self.test_manager.force_plot = self.force_plot
         self.test_manager.disp_plot = self.disp_plot
         self.test_manager.temp_var = self.temp_var
 
-        # Control frame
+        # control frame
         control_frame = tk.Frame(parent_tab)
         control_frame.pack(pady=10, padx=10, fill="x")
 
-        # ... (Your Speed, Cycles, Start, E-Stop, and Quit buttons are placed here, unchanged) ...
         # Speed input
         tk.Label(control_frame, text="Speed (RPM)", font=self.widget_font).pack(side=tk.LEFT)
         self.speed_entry = tk.Entry(control_frame, width=8, font=self.widget_font)
@@ -102,7 +101,7 @@ class DamperDynoGUI(tk.Tk):
         tk.Button(control_frame, text="Start", font=self.btn_font, width=8, height=2, bg="green", fg="white", command=self.start_test).pack(side=tk.LEFT, padx=10)
         # E-Stop button
         tk.Button(control_frame, text="E-STOP", font=self.btn_font, width=8, height=2, bg="red", fg="white", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
-        # Quit button (Note: Changed command to on_closing for clean exit)
+        # Quit button
         tk.Button(control_frame, text="Quit", font=self.btn_font, width=8, height=2, bg="gray", fg="white", command=self.on_closing).pack(side=tk.LEFT, padx=10)
 
     def _create_settings_tab(self, parent_tab):
@@ -110,7 +109,6 @@ class DamperDynoGUI(tk.Tk):
 
         #add calibration info here / defaults for cycle length / warnings
 
-    # ... (start_test and emergency_stop methods are unchanged) ...
     def start_test(self):
         """Retrieve user input and start the test in a separate thread."""
         try:
