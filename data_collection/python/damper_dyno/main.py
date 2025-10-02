@@ -7,7 +7,7 @@ def main():
     """
     Main function to initialize and run the Damper Dyno application.
     """
-    print("Starting Damper Dyno App")
+    print("Starting App")
 
     try:
         # Initialize the hardware controller.

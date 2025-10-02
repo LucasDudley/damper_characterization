@@ -63,6 +63,7 @@ class DAQController:
         )
         self.pwm_task.timing.cfg_implicit_timing(sample_mode=AcquisitionType.CONTINUOUS)
 
+
     def start_motor(self, duty_cycle: float):
         self.enable_motor() # enable motor before starting PWM
 
@@ -76,6 +77,7 @@ class DAQController:
         except nidaqmx.errors.DaqError as e:
             if "already started" not in str(e):
                 raise
+
 
     def stop_motor(self):
         self.disable_motor() # disable motor after stopping PWM
@@ -120,6 +122,7 @@ class DAQController:
             print(f"Error in DAQ callback: {e}")
             return 1 # Indicate an error occurred
 
+
     def start_acquisition(self, analog_channels, sample_rate, chunk_size, callback):
         """
         Configure and start a hardware-timed, callback-driven acquisition.
@@ -160,6 +163,7 @@ class DAQController:
                 self.ai_task.close()
                 self.ai_task = None
     
+
     def stop_acquisition(self):
         """Stop DAQ analog acquisition safely."""
         if self.ai_task:
@@ -175,6 +179,7 @@ class DAQController:
                 self.ai_task = None
         self.data_callback = None
     
+
     def close(self):
         """Safely stop and close all active NI-DAQmx tasks."""
         # Stop all hardware operations first

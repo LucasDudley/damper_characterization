@@ -42,6 +42,7 @@ class DamperDynoGUI(ThemedTk):
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.process_daq_queue()
 
+
     def _setup_settings(self):
         """
         Loads the mandatory config.json file. Exits if the file is missing or corrupt.
@@ -49,6 +50,7 @@ class DamperDynoGUI(ThemedTk):
         """
         self.config_filepath = "config.json"
         self._load_and_apply_settings()
+
 
     def _load_and_apply_settings(self):
         """
@@ -84,6 +86,7 @@ class DamperDynoGUI(ThemedTk):
             self.run_speed_var.set(self.settings['default_max_speed'])
             self.run_cycles_var.set(self.settings['default_num_cycles'])
 
+
     def _save_settings(self):
         """Saves the current GUI values directly to the config.json file."""
         current_string_values = {key: var.get() for key, var in self.setting_vars.items()}
@@ -104,6 +107,7 @@ class DamperDynoGUI(ThemedTk):
         if self._write_config_file(settings_to_save):
             messagebox.showinfo("Settings Saved", "Configuration file has been updated successfully.")
 
+
     def _write_config_file(self, settings_dict):
         """Writes the given dictionary to the config.json file."""
         try:
@@ -115,12 +119,14 @@ class DamperDynoGUI(ThemedTk):
             messagebox.showerror("File Write Error", f"Could not write to config file.\n\nError: {e}")
             return False # Indicate failure
 
+
     def _revert_settings(self):
         """Discards any unsaved changes in the GUI by reloading from config.json."""
         is_confirmed = messagebox.askyesno("Revert Unsaved Changes", "Are you sure you want to discard unsaved changes and reload from 'config.json'?")
         if is_confirmed:
             print("Reverting settings to last saved state.")
             self._load_and_apply_settings()
+
 
     def start_test(self):
         """Reads values from the GUI, consolidates them, and starts the test."""
@@ -157,16 +163,19 @@ class DamperDynoGUI(ThemedTk):
             daemon=True
         ).start()
 
+
     def emergency_stop(self):
         """Stop PWM and data acquisition immediately."""
         print("⚠ EMERGENCY STOP PRESSED ⚠")
         self.test_manager.daq.emergency_stop()
+
 
     def _browse_directory(self):
         """Opens a dialog to select a directory."""
         dir_name = filedialog.askdirectory()
         if dir_name:
             self.setting_vars['output_dir'].set(dir_name)
+
 
     def create_gui(self, style):
         """Create and arrange the main GUI components."""
@@ -185,6 +194,7 @@ class DamperDynoGUI(ThemedTk):
         self._create_dyno_tab(self.dyno_tab)
         self._create_settings_tab(self.settings_tab)
         self._create_analysis_tab(self.analysis_tab)
+
 
     def _create_dyno_tab(self, parent_tab):
         """Populates the 'Live Dyno' tab with all the controls and plots."""
@@ -226,6 +236,7 @@ class DamperDynoGUI(ThemedTk):
         ttk.Button(control_frame, text="Start", style="Big.TButton", command=self.start_test).pack(side=tk.LEFT, padx=10)
         ttk.Button(control_frame, text="E-STOP", style="Big.TButton", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
         ttk.Button(control_frame, text="Quit", style="Big.TButton", command=self.on_closing).pack(side=tk.LEFT, padx=10)
+
 
     def _create_settings_tab(self, parent_tab):
         """Populates the 'Settings' tab with styled configuration options."""
@@ -279,8 +290,10 @@ class DamperDynoGUI(ThemedTk):
         revert_button = ttk.Button(action_frame, text="Revert Changes", command=self._revert_settings)
         revert_button.pack(side="right")
         
+
     def _create_analysis_tab(self, parent_tab):
         ttk.Label(parent_tab, text="PLACEHOLDER FOR ANALYSIS", font=self.widget_font).pack(padx=20, pady=20)
+
 
     def on_closing(self):
         """Handles the complete application shutdown sequence robustly."""
@@ -294,6 +307,7 @@ class DamperDynoGUI(ThemedTk):
         finally:
             self.destroy()
             os._exit(0)
+
 
     def process_daq_queue(self):
         """Check the queue for new data from the DAQ and update the GUI."""
