@@ -1,4 +1,3 @@
-import sys
 from gui import DamperDynoGUI
 from daq import DAQController
 from test_manager import TestManager
