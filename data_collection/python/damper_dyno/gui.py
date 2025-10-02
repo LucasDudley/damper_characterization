@@ -4,6 +4,7 @@ from tkinter import font
 from ttkthemes import ThemedTk
 from plots import RealTimePlot
 import threading
+import queue
 
 class DamperDynoGUI(ThemedTk):
     def __init__(self, test_manager):
@@ -12,16 +13,66 @@ class DamperDynoGUI(ThemedTk):
         self.test_manager = test_manager
         self.title("Damper Dyno")
 
+        # Data buffers for plotting
+        self.time_q = []
+        self.force_q = []
+        self.disp_q = []
+        
+        # Initialize a variable to hold the 'after' job ID
+        self._after_id = None
+
         self.btn_font = font.Font(family="Helvetica", size=18, weight="bold")
         self.widget_font = font.Font(family="Helvetica", size=18)
         
         self.create_gui()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
+        self.process_daq_queue()
+
+    def process_daq_queue(self):
+        """
+        Check the queue for new data from the DAQ and update the GUI.
+        """
+        try:
+            while not self.test_manager.gui_queue.empty():
+                data_packet = self.test_manager.gui_queue.get_nowait()
+                
+                self.time_q.extend(data_packet['times'])
+                self.force_q.extend(data_packet['force'])
+                self.disp_q.extend(data_packet['disp'])
+
+                if self.temp_var and data_packet['temp'] is not None:
+                    self.temp_var.set(f"{data_packet['temp']:.1f} °C")
+            
+            if self.force_plot:
+                self.force_plot.update(self.time_q, [self.force_q], sample_rate=1000)
+            if self.disp_plot:
+                self.disp_plot.update(self.time_q, [self.disp_q], sample_rate=1000)
+
+        except queue.Empty:
+            pass
+        finally:
+            #Store the 'after' job ID
+            self._after_id = self.after(100, self.process_daq_queue)
+
     def on_closing(self):
-        """Handles the complete application shutdown sequence."""
-        self.test_manager.daq.close()
-        self.destroy()
+        """
+        Handles the complete application shutdown sequence robustly.
+        """
+        print("Closing App")
+        
+        #Cancel the pending 'after' job before destroying anything
+        if self._after_id:
+            self.after_cancel(self._after_id)
+            self._after_id = None
+
+        try:
+            self.test_manager.daq.close() 
+        except Exception as e:
+            print(f"Error during DAQ cleanup: {e}")
+        finally:
+            self.destroy()
+
 
     def create_gui(self):
         """Create and arrange the main GUI components, including the tabbed notebook."""
@@ -132,7 +183,12 @@ class DamperDynoGUI(ThemedTk):
         # placeholder to generate characterstic plots
 
     def start_test(self):
-        """Retrieve user input and start the test in a separate thread."""
+        # *** NEW: Clear plotting buffers before a new test ***
+        self.time_q.clear()
+        self.force_q.clear()
+        self.disp_q.clear()
+
+        # This part remains the same
         try:
             speed = float(self.speed_entry.get())
             cycles = int(self.cycles_entry.get())
@@ -143,7 +199,7 @@ class DamperDynoGUI(ThemedTk):
         threading.Thread(
             target=self.test_manager.run_test,
             args=(speed, cycles),
-            daemon=True
+            daemon=True # This is correct, it won't block exit
         ).start()
 
     def emergency_stop(self):

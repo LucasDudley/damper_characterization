@@ -187,4 +187,3 @@ class DAQController:
         print("⚠ DAQ E-STOP ⚠")
         self.stop_motor() # stop motor first
         self.stop_acquisition() # then stop aquiring data
-
