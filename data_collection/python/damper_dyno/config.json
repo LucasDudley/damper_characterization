@@ -11,5 +11,5 @@
     "temp_slope": 40,
     "temp_offset": 0,
     "default_max_speed": 40,
-    "default_num_cycles": 50.0
+    "default_num_cycles": 5
 }

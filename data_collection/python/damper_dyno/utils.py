@@ -1,47 +1,45 @@
+import os
 import csv
 import datetime
 from numbers import Number
 
-def save_test_data(data, filename=None, decimal_places=3):
+def save_test_data(data_to_save, settings):
     """
-    Save test data to CSV, formatting all numbers to a set number of decimal places.
-    Assumes the first row of 'data' is the header.
+    Saves the collected test data to a CSV file in the specified output directory.
+
+    Args:
+        data_to_save (list): A list of lists containing the data, including a header row.
+        settings (dict): The settings dictionary, which must contain the 'output_dir' key.
     """
-    if not data or len(data) < 2: # Check if data besides a header
-        print("Warning: No data to save.")
-        return
-
-    # helper function to format a single row
-    def format_row(row):
-        formatted_row = []
-        for item in row:
-            # Check if the item is a number (int, float, etc.) but not a boolean
-            if isinstance(item, Number) and not isinstance(item, bool):
-                formatted_row.append(f"{item:.{decimal_places}f}")
-            else:
-                formatted_row.append(item)
-        return formatted_row
-
-    if filename is None:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"damper_test_{timestamp}.csv"
-
     try:
-        with open(filename, "w", newline="") as f:
-            writer = csv.writer(f)
-            
-            # The header is the first row, write it without formatting
-            header = data[0]
-            writer.writerow(header)
-            
-            # format the rest of the data rows before writing
-            data_rows = data[1:]
-            writer.writerows(format_row(row) for row in data_rows)
-            
-        print(f"Test data successfully saved to {filename}")
+        # Get the output directory from the settings dictionary.
+        output_dir = settings.get('output_dir')
+        if not output_dir:
+            print("Error: 'output_dir' not found in settings. Cannot save data.")
+            return
 
-    except IOError as e:
-        print(f"Error saving data to {filename}: {e}")
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Generate a unique filename using the current date and time.
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"dyno_test_{timestamp}.csv"
+        
+        # Combine the directory and filename into a full path.
+        full_filepath = os.path.join(output_dir, filename)
+
+        print(f"Saving test data to: {full_filepath}")
+
+        # Write the data to the CSV file using the 'csv' module.
+        with open(full_filepath, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerows(data_to_save)
+        
+        print("Data saved successfully.")
+
+    except KeyError:
+        print("Error: The provided settings dictionary is missing the 'output_dir' key.")
+    except Exception as e:
+        print(f"An unexpected error occurred while saving the data: {e}")
 
 def convert_speed_to_duty_cycle(speed_rpm, rpm_range=[0, 100], duty_cycle_range=[10, 90]):
     """
