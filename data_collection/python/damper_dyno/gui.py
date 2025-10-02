@@ -1,7 +1,7 @@
 import os
+import json
 import tkinter as tk
-from tkinter import ttk
-from tkinter import font
+from tkinter import (ttk, font, filedialog, messagebox)
 from ttkthemes import ThemedTk
 from plots import RealTimePlot
 import threading
@@ -19,21 +19,284 @@ class DamperDynoGUI(ThemedTk):
         self.force_q = []
         self.disp_q = []
         
-        # Initialize a variable to hold the 'after' job ID
-        self._after_id = None
-
+        # --- FONT & STYLE DEFINITIONS ---
         self.btn_font = font.Font(family="Helvetica", size=18, weight="bold")
         self.widget_font = font.Font(family="Helvetica", size=18)
-        
-        self.create_gui()
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.header_font = font.Font(family="Helvetica", size=13, weight="bold")
+        self.label_font = font.Font(family="Helvetica", size=12)
+        self.entry_font = font.Font(family="Helvetica", size=12)
 
+        style = ttk.Style()
+        style.configure("TLabelFrame.Label", font=self.header_font)
+        style.configure("TLabel", font=self.label_font)
+        style.configure("TButton", font=self.label_font)
+        style.configure("TEntry", font=self.entry_font, padding=(5, 5, 5, 5))
+        # Custom style for big buttons on main tab
+        style.configure("Big.TButton", font=self.btn_font, padding=(10, 10))
+
+
+        # --- INITIALIZATION ---
+        self._after_id = None
+        self._setup_settings() # This creates and loads all settings and StringVars
+        self.create_gui(style) # Create the GUI
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.process_daq_queue()
 
+    def _setup_settings(self):
+        """
+        Loads the mandatory config.json file. Exits if the file is missing or corrupt.
+        This is the single source of truth for the application's state.
+        """
+        self.config_filepath = "config.json"
+        self._load_and_apply_settings()
+
+    def _load_and_apply_settings(self):
+        """
+        Reads config.json and populates/updates all Tkinter variables.
+        """
+        try:
+            with open(self.config_filepath, 'r') as f:
+                self.settings = json.load(f)
+            print(f"Successfully loaded settings from '{self.config_filepath}'")
+        except FileNotFoundError:
+            messagebox.showerror("Fatal Error: Configuration Missing", f"The required configuration file was not found.\n\nExpected location: {os.path.abspath(self.config_filepath)}\n\nThe application cannot start without this file.")
+            self.destroy()
+            os._exit(1)
+            return
+        except json.JSONDecodeError as e:
+            messagebox.showerror("Fatal Error: Configuration Corrupt", f"The configuration file '{self.config_filepath}' is corrupt or not valid JSON.\n\nPlease fix the file or restore it from version control.\n\nError: {e}")
+            self.destroy()
+            os._exit(1)
+            return
+
+        # Create the Tkinter StringVars if they don't exist, otherwise update them
+        if not hasattr(self, 'setting_vars'):
+            self.setting_vars = {key: tk.StringVar(value=val) for key, val in self.settings.items()}
+        else:
+            for key, val in self.settings.items():
+                self.setting_vars[key].set(val)
+                
+        # Also create/update the main tab's StringVars
+        if not hasattr(self, 'run_speed_var'):
+            self.run_speed_var = tk.StringVar(value=self.settings['default_max_speed'])
+            self.run_cycles_var = tk.StringVar(value=self.settings['default_num_cycles'])
+        else:
+            self.run_speed_var.set(self.settings['default_max_speed'])
+            self.run_cycles_var.set(self.settings['default_num_cycles'])
+
+    def _save_settings(self):
+        """Saves the current GUI values directly to the config.json file."""
+        current_string_values = {key: var.get() for key, var in self.setting_vars.items()}
+        
+        settings_to_save = {}
+        for key, value in current_string_values.items():
+            if key == 'output_dir':
+                settings_to_save[key] = value
+                continue
+            try:
+                if '.' in str(value):
+                    settings_to_save[key] = float(value)
+                else:
+                    settings_to_save[key] = int(value)
+            except (ValueError, TypeError):
+                settings_to_save[key] = value
+
+        if self._write_config_file(settings_to_save):
+            messagebox.showinfo("Settings Saved", "Configuration file has been updated successfully.")
+
+    def _write_config_file(self, settings_dict):
+        """Writes the given dictionary to the config.json file."""
+        try:
+            with open(self.config_filepath, 'w') as f:
+                # Use indent=4 for a human-readable JSON file
+                json.dump(settings_dict, f, indent=4)
+            return True # Indicate success
+        except Exception as e:
+            messagebox.showerror("File Write Error", f"Could not write to config file.\n\nError: {e}")
+            return False # Indicate failure
+
+    def _revert_settings(self):
+        """Discards any unsaved changes in the GUI by reloading from config.json."""
+        is_confirmed = messagebox.askyesno("Revert Unsaved Changes", "Are you sure you want to discard unsaved changes and reload from 'config.json'?")
+        if is_confirmed:
+            print("Reverting settings to last saved state.")
+            self._load_and_apply_settings()
+
+    def start_test(self):
+        """Reads values from the GUI, consolidates them, and starts the test."""
+        self.time_q.clear()
+        self.force_q.clear()
+        self.disp_q.clear()
+        
+        try:
+            settings_for_run = {key: var.get() for key, var in self.setting_vars.items()}
+            
+            # --- The keys for the run are now the default keys ---
+            run_speed = settings_for_run['default_max_speed']
+            run_cycles = settings_for_run['default_num_cycles']
+            
+            # Add run-specific keys to the dictionary for the TestManager
+            settings_for_run['run_speed_rpm'] = float(run_speed)
+            settings_for_run['run_num_cycles'] = int(run_cycles)
+
+            # Type conversion for the rest of the settings
+            for key, value in settings_for_run.items():
+                if key not in ['output_dir', 'run_speed_rpm', 'run_num_cycles']:
+                    if '.' in str(value):
+                        settings_for_run[key] = float(value)
+                    elif value:
+                        settings_for_run[key] = int(value)
+
+        except (ValueError, TypeError) as e:
+            messagebox.showerror("Invalid Input", f"Please check the Speed and Cycles fields for valid numbers.\n\nError: {e}")
+            return
+            
+        threading.Thread(
+            target=self.test_manager.run_test,
+            args=(settings_for_run,),
+            daemon=True
+        ).start()
+
+    def emergency_stop(self):
+        """Stop PWM and data acquisition immediately."""
+        print("⚠ EMERGENCY STOP PRESSED ⚠")
+        self.test_manager.daq.emergency_stop()
+
+    def _browse_directory(self):
+        """Opens a dialog to select a directory."""
+        dir_name = filedialog.askdirectory()
+        if dir_name:
+            self.setting_vars['output_dir'].set(dir_name)
+
+    def create_gui(self, style):
+        """Create and arrange the main GUI components."""
+        style.configure("Custom.TNotebook.Tab", font=self.btn_font, padding=[10, 0])
+        style.configure("Custom.TNotebook", tabmargins=[10, 5, 10, 0])
+        notebook = ttk.Notebook(self, style="Custom.TNotebook")
+        notebook.pack(expand=True, fill="both", padx=20, pady=10)
+
+        self.dyno_tab = ttk.Frame(notebook)
+        self.settings_tab = ttk.Frame(notebook)
+        self.analysis_tab = ttk.Frame(notebook)
+        notebook.add(self.dyno_tab, text="Run Test")
+        notebook.add(self.analysis_tab, text="Analysis")
+        notebook.add(self.settings_tab, text="Settings")
+
+        self._create_dyno_tab(self.dyno_tab)
+        self._create_settings_tab(self.settings_tab)
+        self._create_analysis_tab(self.analysis_tab)
+
+    def _create_dyno_tab(self, parent_tab):
+        """Populates the 'Live Dyno' tab with all the controls and plots."""
+        plots_frame = ttk.Frame(parent_tab)
+        plots_frame.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+
+        left_plot_frame = ttk.Frame(plots_frame)
+        left_plot_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
+        right_plot_frame = ttk.Frame(plots_frame)
+        right_plot_frame.pack(side="left", fill="both", expand=True, padx=(5, 0))
+
+        self.force_plot = RealTimePlot(master=left_plot_frame, signal_names=["Force"], y_label="Force [N]", y_range=(-1000, 1000))
+        self.disp_plot = RealTimePlot(master=right_plot_frame, signal_names=["Displacement"], y_label="Displacement [mm]", y_range=(0, 50))
+        
+        readouts_frame = ttk.Frame(parent_tab)
+        readouts_frame.pack(side="right", padx=10, pady=5, anchor="e")
+        ttk.Label(readouts_frame, text="Temperature:", font=("Helvetica", 20)).pack(side=tk.LEFT, padx=5)
+        
+        self.temp_var = tk.StringVar(value="-- °C")
+        ttk.Label(readouts_frame, textvariable=self.temp_var, font=self.btn_font).pack(side=tk.LEFT, padx=5)
+
+        self.test_manager.force_plot = self.force_plot
+        self.test_manager.disp_plot = self.disp_plot
+        self.test_manager.temp_var = self.temp_var
+
+        control_frame = ttk.Frame(parent_tab)
+        control_frame.pack(pady=10, padx=10)
+
+        # Speed input
+        ttk.Label(control_frame, text="Speed (RPM)", font=self.widget_font).pack(side=tk.LEFT)
+        self.speed_entry = ttk.Entry(control_frame, width=8, font=self.widget_font, textvariable=self.setting_vars['default_max_speed'])
+        self.speed_entry.pack(side=tk.LEFT, padx=5)
+
+        # Cycles input
+        ttk.Label(control_frame, text="Cycles", font=self.widget_font).pack(side=tk.LEFT, padx=(10, 0))
+        self.cycles_entry = ttk.Entry(control_frame, width=8, font=self.widget_font, textvariable=self.setting_vars['default_num_cycles'])
+        self.cycles_entry.pack(side=tk.LEFT, padx=5)
+
+        ttk.Button(control_frame, text="Start", style="Big.TButton", command=self.start_test).pack(side=tk.LEFT, padx=10)
+        ttk.Button(control_frame, text="E-STOP", style="Big.TButton", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
+        ttk.Button(control_frame, text="Quit", style="Big.TButton", command=self.on_closing).pack(side=tk.LEFT, padx=10)
+
+    def _create_settings_tab(self, parent_tab):
+        """Populates the 'Settings' tab with styled configuration options."""
+        main_frame = ttk.Frame(parent_tab, padding=(20, 10))
+        main_frame.pack(expand=True, fill="both")
+
+        file_frame = ttk.LabelFrame(main_frame, text="File Settings", padding=(15, 10))
+        file_frame.pack(fill="x", pady=10)
+        file_frame.columnconfigure(1, weight=1)
+        ttk.Label(file_frame, text="Output Directory:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(file_frame, textvariable=self.setting_vars['output_dir']).grid(row=0, column=1, padx=5, pady=5, sticky="ew")
+        ttk.Button(file_frame, text="Browse...", command=self._browse_directory).grid(row=0, column=2, padx=5, pady=5)
+
+        ranges_frame = ttk.LabelFrame(main_frame, text="Motor Mapping", padding=(15, 10))
+        ranges_frame.pack(fill="x", pady=10)
+        ttk.Label(ranges_frame, text="RPM Range:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(ranges_frame, textvariable=self.setting_vars['rpm_min'], width=10).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(ranges_frame, text="to").grid(row=0, column=2, padx=(10, 10))
+        ttk.Entry(ranges_frame, textvariable=self.setting_vars['rpm_max'], width=10).grid(row=0, column=3, padx=5, pady=5)
+        ttk.Label(ranges_frame, text="Duty Cycle Range (%):").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(ranges_frame, textvariable=self.setting_vars['duty_cycle_min'], width=10).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Label(ranges_frame, text="to").grid(row=1, column=2, padx=(10, 10))
+        ttk.Entry(ranges_frame, textvariable=self.setting_vars['duty_cycle_max'], width=10).grid(row=1, column=3, padx=5, pady=5)
+
+        cal_frame = ttk.LabelFrame(main_frame, text="Sensor Calibration (Voltage Mapping)", padding=(15, 10))
+        cal_frame.pack(fill="x", pady=10)
+        ttk.Label(cal_frame, text="Sensor", font=self.header_font).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Label(cal_frame, text="Slope", font=self.header_font).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(cal_frame, text="Offset", font=self.header_font).grid(row=0, column=2, padx=5, pady=5)
+        ttk.Label(cal_frame, text="Force:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['force_slope'], width=15).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['force_offset'], width=15).grid(row=1, column=2, padx=5, pady=5)
+        ttk.Label(cal_frame, text="Displacement:").grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['disp_slope'], width=15).grid(row=2, column=1, padx=5, pady=5)
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['disp_offset'], width=15).grid(row=2, column=2, padx=5, pady=5)
+        ttk.Label(cal_frame, text="Temperature:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['temp_slope'], width=15).grid(row=3, column=1, padx=5, pady=5)
+        ttk.Entry(cal_frame, textvariable=self.setting_vars['temp_offset'], width=15).grid(row=3, column=2, padx=5, pady=5)
+
+        defaults_frame = ttk.LabelFrame(main_frame, text="Test Defaults", padding=(15, 10))
+        defaults_frame.pack(fill="x", pady=10)
+        ttk.Label(defaults_frame, text="Default Speed (RPM):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(defaults_frame, textvariable=self.setting_vars['default_max_speed'], width=15).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(defaults_frame, text="Default Cycle Count:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(defaults_frame, textvariable=self.setting_vars['default_num_cycles'], width=15).grid(row=1, column=1, padx=5, pady=5)
+
+        action_frame = ttk.Frame(main_frame, padding=(0, 10))
+        action_frame.pack(fill="x", side="bottom")
+        save_button = ttk.Button(action_frame, text="Save Settings", command=self._save_settings)
+        save_button.pack(side="right", padx=5)
+        revert_button = ttk.Button(action_frame, text="Revert Changes", command=self._revert_settings)
+        revert_button.pack(side="right")
+        
+    def _create_analysis_tab(self, parent_tab):
+        ttk.Label(parent_tab, text="PLACEHOLDER FOR ANALYSIS", font=self.widget_font).pack(padx=20, pady=20)
+
+    def on_closing(self):
+        """Handles the complete application shutdown sequence robustly."""
+        if self._after_id:
+            self.after_cancel(self._after_id)
+            self._after_id = None
+        try:
+            self.test_manager.daq.close() 
+        except Exception as e:
+            print(f"Error during DAQ cleanup: {e}")
+        finally:
+            self.destroy()
+            os._exit(0)
+
     def process_daq_queue(self):
-        """
-        Check the queue for new data from the DAQ and update the GUI.
-        """
+        """Check the queue for new data from the DAQ and update the GUI."""
         try:
             while not self.test_manager.gui_queue.empty():
                 data_packet = self.test_manager.gui_queue.get_nowait()
@@ -49,159 +312,7 @@ class DamperDynoGUI(ThemedTk):
                 self.force_plot.update(self.time_q, [self.force_q], sample_rate=1000)
             if self.disp_plot:
                 self.disp_plot.update(self.time_q, [self.disp_q], sample_rate=1000)
-
         except queue.Empty:
             pass
         finally:
-            #Store the 'after' job ID
             self._after_id = self.after(100, self.process_daq_queue)
-
-    def on_closing(self):
-        """
-        Handles the complete application shutdown sequence robustly.
-        """
-        print("Closing App")
-        
-        #Cancel the pending 'after' job before destroying anything
-        if self._after_id:
-            self.after_cancel(self._after_id)
-            self._after_id = None
-
-        try:
-            self.test_manager.daq.close() 
-        except Exception as e:
-            print(f"Error during DAQ cleanup: {e}")
-        finally:
-            self.destroy()
-            os._exit(0)
-
-    def create_gui(self):
-        """Create and arrange the main GUI components, including the tabbed notebook."""
-        
-        style = ttk.Style()
-
-        # Configure the notebook tabs
-        style.configure("Custom.TNotebook.Tab",
-                font=self.btn_font,
-                padding=[10, 0])   
-
-        style.configure("Custom.TNotebook", tabmargins=[10, 5, 10, 0])         # add space around the tab area
-
-        # apply the custom style to the Notebook
-        notebook = ttk.Notebook(self, style="Custom.TNotebook")
-        notebook.pack(expand=True, fill="both", padx=20, pady=10)
-
-        # create frames for each tab
-        self.dyno_tab = ttk.Frame(notebook)
-        self.settings_tab = ttk.Frame(notebook)
-        self.analysis_tab = ttk.Frame(notebook)
-
-        # add the frames to the notebook with titles
-        notebook.add(self.dyno_tab, text="Run Test")
-        notebook.add(self.analysis_tab, text="Analysis")
-        notebook.add(self.settings_tab, text="Settings")
-
-        # call separate methods to build the content of each tab
-        self._create_dyno_tab(self.dyno_tab)
-        self._create_settings_tab(self.settings_tab)
-        self._create_analysis_tab(self.analysis_tab)
-
-    def _create_dyno_tab(self, parent_tab):
-        """Populates the 'Live Dyno' tab with all the controls and plots."""
-        
-        # main frame to hold both plots
-        plots_frame = tk.Frame(parent_tab)
-        plots_frame.pack(fill="both", expand=True, padx=10, pady=(10, 0))
-
-        # create plot frames
-        left_plot_frame = tk.Frame(plots_frame)
-        left_plot_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=(0, 5))
-
-        right_plot_frame = tk.Frame(plots_frame)
-        right_plot_frame.pack(side=tk.LEFT, fill="both", expand=True, padx=(5, 0))
-
-        # force plot
-        self.force_plot = RealTimePlot(
-            master=left_plot_frame,
-            signal_names=["Force"],
-            y_label="Force [N]",
-            y_range=(-1000, 1000)
-        )
-
-        # displacement plot
-        self.disp_plot = RealTimePlot(
-            master=right_plot_frame,
-            signal_names=["Displacement"],
-            y_label="Displacement [mm]",
-            y_range=(0, 50)
-        )
-        
-        # frame for digital readouts
-        readouts_frame = tk.Frame(parent_tab)
-        readouts_frame.pack(side="right", padx=10, pady=5, anchor="e")
-        tk.Label(readouts_frame, text="Temperature:", font=("Helvetica", 20)).pack(side=tk.LEFT, padx=5)
-        
-        self.temp_var = tk.StringVar(value="-- °C")
-        temp_label = tk.Label(readouts_frame, textvariable=self.temp_var, font=self.btn_font)
-        temp_label.pack(side=tk.LEFT, padx=5)
-
-        # attach to test_manager
-        self.test_manager.force_plot = self.force_plot
-        self.test_manager.disp_plot = self.disp_plot
-        self.test_manager.temp_var = self.temp_var
-
-        # control frame
-        control_frame = tk.Frame(parent_tab)
-        control_frame.pack(pady=10, padx=10)
-
-        # Speed input
-        tk.Label(control_frame, text="Speed (RPM)", font=self.widget_font).pack(side=tk.LEFT)
-        self.speed_entry = tk.Entry(control_frame, width=8, font=self.widget_font)
-        self.speed_entry.pack(side=tk.LEFT, padx=5)
-
-        # Cycles input
-        tk.Label(control_frame, text="Cycles", font=self.widget_font).pack(side=tk.LEFT, padx=(10, 0))
-        self.cycles_entry = tk.Entry(control_frame, width=8, font=self.widget_font)
-        self.cycles_entry.pack(side=tk.LEFT, padx=5)
-
-        # Start button
-        tk.Button(control_frame, text="Start", font=self.btn_font, width=8, height=2, bg="green", fg="white", command=self.start_test).pack(side=tk.LEFT, padx=10)
-
-        # E-Stop button
-        tk.Button(control_frame, text="E-STOP", font=self.btn_font, width=8, height=2, bg="red", fg="white", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
-
-        # Quit button
-        tk.Button(control_frame, text="Quit", font=self.btn_font, width=8, height=2, bg="gray", fg="white", command=self.on_closing).pack(side=tk.LEFT, padx=10)
-
-    def _create_settings_tab(self, parent_tab):
-        
-        tk.Label(parent_tab, text="PLACEHOLDER FOR SETTINGS", font=self.widget_font).pack(padx=20, pady=20)
-        # add calibration info here / defaults for cycle length / warnings
-
-    def _create_analysis_tab(self, parent_tab):
-        
-        tk.Label(parent_tab, text="PLACEHOLDER FOR ANALYSIS", font=self.widget_font).pack(padx=20, pady=20)
-        # placeholder to generate characterstic plots
-
-    def start_test(self):
-        self.time_q.clear()
-        self.force_q.clear()
-        self.disp_q.clear()
-
-        try:
-            speed = float(self.speed_entry.get())
-            cycles = int(self.cycles_entry.get())
-        except ValueError:
-            print("Invalid input for speed or cycles.")
-            return
-
-        threading.Thread(
-            target=self.test_manager.run_test,
-            args=(speed, cycles),
-            daemon=True # This is correct, it won't block exit
-        ).start()
-
-    def emergency_stop(self):
-        """Stop PWM and data acquisition immediately."""
-        print("⚠ EMERGENCY STOP PRESSED ⚠")
-        self.test_manager.daq.emergency_stop()
