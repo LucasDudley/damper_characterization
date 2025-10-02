@@ -1,18 +1,19 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font
+from ttkthemes import ThemedTk
 from plots import RealTimePlot
 import threading
 
-class DamperDynoGUI(tk.Tk):
+class DamperDynoGUI(ThemedTk):
     def __init__(self, test_manager):
-        super().__init__()
+        super().__init__(theme="arc")
+
         self.test_manager = test_manager
         self.title("Damper Dyno")
 
         self.btn_font = font.Font(family="Helvetica", size=18, weight="bold")
         self.widget_font = font.Font(family="Helvetica", size=18)
-
         
         self.create_gui()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -24,15 +25,13 @@ class DamperDynoGUI(tk.Tk):
 
     def create_gui(self):
         """Create and arrange the main GUI components, including the tabbed notebook."""
-
+        
         style = ttk.Style()
-        style.theme_use("clam")
 
         # Configure the notebook tabs
         style.configure("Custom.TNotebook.Tab",
                 font=self.btn_font,
-                padding=[10, 0],
-                width=0)   # fixed width in "character units"
+                padding=[10, 0])   
 
         style.configure("Custom.TNotebook", tabmargins=[10, 5, 10, 0])         # add space around the tab area
 
@@ -87,7 +86,7 @@ class DamperDynoGUI(tk.Tk):
         
         # frame for digital readouts
         readouts_frame = tk.Frame(parent_tab)
-        readouts_frame.pack(fill="x", padx=10, pady=5)
+        readouts_frame.pack(side="right", padx=10, pady=5, anchor="e")
         tk.Label(readouts_frame, text="Temperature:", font=("Helvetica", 20)).pack(side=tk.LEFT, padx=5)
         
         self.temp_var = tk.StringVar(value="-- °C")
@@ -101,31 +100,35 @@ class DamperDynoGUI(tk.Tk):
 
         # control frame
         control_frame = tk.Frame(parent_tab)
-        control_frame.pack(pady=10, padx=10, fill="x")
+        control_frame.pack(pady=10, padx=10)
 
         # Speed input
         tk.Label(control_frame, text="Speed (RPM)", font=self.widget_font).pack(side=tk.LEFT)
         self.speed_entry = tk.Entry(control_frame, width=8, font=self.widget_font)
         self.speed_entry.pack(side=tk.LEFT, padx=5)
+
         # Cycles input
         tk.Label(control_frame, text="Cycles", font=self.widget_font).pack(side=tk.LEFT, padx=(10, 0))
         self.cycles_entry = tk.Entry(control_frame, width=8, font=self.widget_font)
         self.cycles_entry.pack(side=tk.LEFT, padx=5)
+
         # Start button
         tk.Button(control_frame, text="Start", font=self.btn_font, width=8, height=2, bg="green", fg="white", command=self.start_test).pack(side=tk.LEFT, padx=10)
+
         # E-Stop button
         tk.Button(control_frame, text="E-STOP", font=self.btn_font, width=8, height=2, bg="red", fg="white", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
+
         # Quit button
         tk.Button(control_frame, text="Quit", font=self.btn_font, width=8, height=2, bg="gray", fg="white", command=self.on_closing).pack(side=tk.LEFT, padx=10)
 
     def _create_settings_tab(self, parent_tab):
+        
         tk.Label(parent_tab, text="PLACEHOLDER FOR SETTINGS", font=self.widget_font).pack(padx=20, pady=20)
-
         # add calibration info here / defaults for cycle length / warnings
 
     def _create_analysis_tab(self, parent_tab):
+        
         tk.Label(parent_tab, text="PLACEHOLDER FOR ANALYSIS", font=self.widget_font).pack(padx=20, pady=20)
-
         # placeholder to generate characterstic plots
 
     def start_test(self):

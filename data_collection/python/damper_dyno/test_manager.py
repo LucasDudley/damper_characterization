@@ -16,7 +16,7 @@ class TestManager:
         
         self.force_plot = None
         self.disp_plot = None
-        self.temp_var = None # This will hold the tk.StringVar
+        self.temp_var = None # hold the tk.StringVar
 
         self.signal_config = {
             "ai0": ("Force", "N", map_voltage_to_force),
