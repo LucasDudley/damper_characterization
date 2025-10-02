@@ -10,8 +10,9 @@ class DamperDynoGUI(tk.Tk):
         self.test_manager = test_manager
         self.title("Damper Dyno")
 
-        self.btn_font = font.Font(size=18, weight="bold")
-        self.widget_font = font.Font(size=20)
+        self.btn_font = font.Font(family="Helvetica", size=18, weight="bold")
+        self.widget_font = font.Font(family="Helvetica", size=18)
+
         
         self.create_gui()
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -25,21 +26,34 @@ class DamperDynoGUI(tk.Tk):
         """Create and arrange the main GUI components, including the tabbed notebook."""
 
         style = ttk.Style()
-        style.configure("Custom.TNotebook.Tab", font=self.btn_font)
+        style.theme_use("clam")
+
+        # Configure the notebook tabs
+        style.configure("Custom.TNotebook.Tab",
+                font=self.btn_font,
+                padding=[10, 0],
+                width=0)   # fixed width in "character units"
+
+        style.configure("Custom.TNotebook", tabmargins=[10, 5, 10, 0])         # add space around the tab area
+
+        # apply the custom style to the Notebook
         notebook = ttk.Notebook(self, style="Custom.TNotebook")
         notebook.pack(expand=True, fill="both", padx=20, pady=10)
 
         # create frames for each tab
         self.dyno_tab = ttk.Frame(notebook)
         self.settings_tab = ttk.Frame(notebook)
+        self.analysis_tab = ttk.Frame(notebook)
 
         # add the frames to the notebook with titles
         notebook.add(self.dyno_tab, text="Run Test")
+        notebook.add(self.analysis_tab, text="Analysis")
         notebook.add(self.settings_tab, text="Settings")
 
         # call separate methods to build the content of each tab
         self._create_dyno_tab(self.dyno_tab)
         self._create_settings_tab(self.settings_tab)
+        self._create_analysis_tab(self.analysis_tab)
 
     def _create_dyno_tab(self, parent_tab):
         """Populates the 'Live Dyno' tab with all the controls and plots."""
@@ -107,7 +121,12 @@ class DamperDynoGUI(tk.Tk):
     def _create_settings_tab(self, parent_tab):
         tk.Label(parent_tab, text="PLACEHOLDER FOR SETTINGS", font=self.widget_font).pack(padx=20, pady=20)
 
-        #add calibration info here / defaults for cycle length / warnings
+        # add calibration info here / defaults for cycle length / warnings
+
+    def _create_analysis_tab(self, parent_tab):
+        tk.Label(parent_tab, text="PLACEHOLDER FOR ANALYSIS", font=self.widget_font).pack(padx=20, pady=20)
+
+        # placeholder to generate characterstic plots
 
     def start_test(self):
         """Retrieve user input and start the test in a separate thread."""
