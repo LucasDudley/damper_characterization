@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font
@@ -72,7 +73,7 @@ class DamperDynoGUI(ThemedTk):
             print(f"Error during DAQ cleanup: {e}")
         finally:
             self.destroy()
-
+            os._exit(0)
 
     def create_gui(self):
         """Create and arrange the main GUI components, including the tabbed notebook."""
@@ -183,12 +184,10 @@ class DamperDynoGUI(ThemedTk):
         # placeholder to generate characterstic plots
 
     def start_test(self):
-        # *** NEW: Clear plotting buffers before a new test ***
         self.time_q.clear()
         self.force_q.clear()
         self.disp_q.clear()
 
-        # This part remains the same
         try:
             speed = float(self.speed_entry.get())
             cycles = int(self.cycles_entry.get())
