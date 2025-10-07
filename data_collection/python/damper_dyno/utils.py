@@ -2,6 +2,9 @@ import os
 import csv
 import datetime
 from numbers import Number
+import numpy as np
+from scipy.optimize import minimize_scalar
+import warnings
 
 def save_test_data(data_to_save, settings):
     """
@@ -87,3 +90,90 @@ def map_voltage_to_temperature(voltage):
     slope = 40 #C/V
     offset = 0
     return (voltage * slope) + offset
+
+def required_theta_dot(V_des, Lc, R):
+    """
+    Calculates the required constant angular speed of a crank to achieve a 
+    desired peak linear speed of a piston in a slider-crank mechanism.
+
+    The optimization is performed in two steps: a coarse grid search followed by a
+    fine, bounded optimization using SciPy's optimizer.
+
+    Args:
+        V_des (float): The desired peak linear speed of the piston.
+        Lc (float): The length of the connecting rod.
+        R (float): The radius of the crank.
+
+    Returns:
+        tuple: A tuple containing:
+            - theta_dot_req (float): The required constant angular speed in rad/s.
+            - Gmax (float): The maximum value of the geometric function G(theta).
+            - theta_at_Gmax (float): The angle theta (in radians) at which G is maximum.
+    """
+        
+    n = Lc / R
+    if n < 1:
+        warnings.warn(
+            f"n = Lc/R = {n:.4g} < 1. This geometry is not physically possible "
+            "and will produce imaginary results for some theta."
+        )
+
+    def Gfun(th):
+        """
+        Geometric function G(theta) that relates linear to angular velocity.
+        Handles arrays and scalars, and masks invalid theta values.
+        """
+        # Ensure input is a numpy array
+        th = np.asarray(th)
+        s = np.sin(th)
+        root_term = n**2 - s**2
+
+        # mask for valid inputs (where the term under sqrt is non-negative)
+        mask = root_term >= 0
+
+        # Initialize G (match the input shape to handle scalars and arrays correctly)
+        G = np.full(th.shape, -np.inf)
+
+        # Calc G for the valid values to avoid sqrt domain errors
+        G[mask] = R * (s[mask] + np.sin(2 * th[mask]) / (2 * np.sqrt(root_term[mask])))
+        
+        # If the input was a scalar, return a scalar for the optimizer
+        return G.item() if G.ndim == 0 else G
+
+    # 1. coarse search
+    N = 100
+    theta_grid = np.linspace(0, 2 * np.pi, N)
+    G_vals = Gfun(theta_grid)
+    
+    # Find the index of the maximum value in the coarse grid
+    idx = np.argmax(G_vals)
+    theta_coarse = theta_grid[idx]
+
+    # 2. Refine the search around the coarse maximum using a bounded optimizer
+    w = 0.15
+    a = theta_coarse - w
+    b = theta_coarse + w
+
+    # To maximize G(t), we minimize -G(t)
+    negG = lambda t: -Gfun(t)
+
+    result = minimize_scalar(negG, bounds=(a, b), method='bounded')
+
+    if not result.success:
+        warnings.warn(f"Optimization failed: {result.message}. Falling back to coarse grid result.")
+        Gmax = G_vals[idx]
+        theta_at_Gmax = theta_coarse
+    else:
+        theta_at_Gmax = result.x
+        Gmax = -result.fun
+
+    # checks and calculation
+    if Gmax <= 0:
+        warnings.warn(f"Gmax is non-positive ({Gmax:.4g}). Check geometry.", UserWarning)
+        # Avoid division by zero or negative speed
+        theta_dot_req = np.inf if V_des > 0 else 0
+    else:
+        # Required angular velocity
+        theta_dot_req = V_des / Gmax
+
+    return theta_dot_req, Gmax, theta_at_Gmax

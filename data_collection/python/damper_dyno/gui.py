@@ -6,6 +6,9 @@ from ttkthemes import ThemedTk
 from plots import RealTimePlot
 import threading
 import queue
+import math
+
+from utils import required_theta_dot
 
 class DamperDynoGUI(ThemedTk):
     def __init__(self, test_manager):
@@ -26,12 +29,12 @@ class DamperDynoGUI(ThemedTk):
         self.label_font = font.Font(family="Helvetica", size=12)
         self.entry_font = font.Font(family="Helvetica", size=12)
 
+        # configure style
         style = ttk.Style()
         style.configure("TLabelFrame.Label", font=self.header_font)
         style.configure("TLabel", font=self.label_font)
         style.configure("TButton", font=self.label_font)
         style.configure("TEntry", font=self.entry_font, padding=(5, 5, 5, 5))
-        # Custom style for big buttons on main tab
         style.configure("Big.TButton", font=self.btn_font, padding=(10, 10))
 
 
@@ -135,23 +138,48 @@ class DamperDynoGUI(ThemedTk):
         self.disp_q.clear()
         
         try:
+            # Get all settings from the config file
             settings_for_run = {key: var.get() for key, var in self.setting_vars.items()}
+
+            target_linear_speed = float(self.setting_vars['default_linear_speed_ips'].get())
+            crank_radius = float(settings_for_run['crank_radius_in'])
+            rod_length = float(settings_for_run['rod_length_in'])
+
+            if crank_radius <= 0 or rod_length <= 0:
+                messagebox.showerror("Invalid Geometry", "Check your config.json file.")
+                return
+
+            theta_dot_rad_s, _, _ = required_theta_dot(
+                V_des=target_linear_speed,
+                Lc=rod_length,
+                R=crank_radius
+            )
+
+            # Convert rad/s to RPM
+            calculated_rpm = theta_dot_rad_s * 60 / (2 * math.pi)
+            print(f"Target linear speed: {target_linear_speed} in/s => Calculated RPM: {calculated_rpm:.2f}")
+
+            # Add to the settings dictionary for the TestManager
+            settings_for_run['run_speed_rpm'] = calculated_rpm
             
-            # --- The keys for the run are now the default keys ---
             run_speed = settings_for_run['default_max_speed']
             run_cycles = settings_for_run['default_num_cycles']
             
-            # Add run-specific keys to the dictionary for the TestManager
-            settings_for_run['run_speed_rpm'] = float(run_speed)
-            settings_for_run['run_num_cycles'] = int(run_cycles)
-
-            # Type conversion for the rest of the settings
+            # prepare the dictionary that will be passed to the test manager.
             for key, value in settings_for_run.items():
-                if key not in ['output_dir', 'run_speed_rpm', 'run_num_cycles']:
-                    if '.' in str(value):
-                        settings_for_run[key] = float(value)
-                    elif value:
-                        settings_for_run[key] = int(value)
+                if key != 'output_dir': # Keep output_dir as a string
+                    try:
+                        if '.' in str(value):
+                            settings_for_run[key] = float(value)
+                        elif str(value):
+                            settings_for_run[key] = int(value)
+                    except (ValueError, TypeError):
+                        pass
+
+            # Explicitly set the final run parameters in the dictionary
+            settings_for_run['run_speed_rpm'] = calculated_rpm
+            settings_for_run['run_num_cycles'] = int(self.setting_vars['default_num_cycles'].get())
+            
 
         except (ValueError, TypeError) as e:
             messagebox.showerror("Invalid Input", f"Please check the Speed and Cycles fields for valid numbers.\n\nError: {e}")
@@ -224,9 +252,14 @@ class DamperDynoGUI(ThemedTk):
         control_frame.pack(pady=10, padx=10)
 
         # Speed input
-        ttk.Label(control_frame, text="Speed (RPM)", font=self.widget_font).pack(side=tk.LEFT)
-        self.speed_entry = ttk.Entry(control_frame, width=8, font=self.widget_font, textvariable=self.setting_vars['default_max_speed'])
-        self.speed_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Label(control_frame, text="Linear Speed (in/s)", font=self.widget_font).pack(side=tk.LEFT)
+        self.linear_speed_entry = ttk.Entry(
+            control_frame, 
+            width=8, 
+            font=self.widget_font, 
+            textvariable=self.setting_vars['default_linear_speed_ips']
+        )
+        self.linear_speed_entry.pack(side=tk.LEFT, padx=5)
 
         # Cycles input
         ttk.Label(control_frame, text="Cycles", font=self.widget_font).pack(side=tk.LEFT, padx=(10, 0))
@@ -278,10 +311,11 @@ class DamperDynoGUI(ThemedTk):
 
         defaults_frame = ttk.LabelFrame(main_frame, text="Test Defaults", padding=(15, 10))
         defaults_frame.pack(fill="x", pady=10)
-        ttk.Label(defaults_frame, text="Default Speed (RPM):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        ttk.Entry(defaults_frame, textvariable=self.setting_vars['default_max_speed'], width=15).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Label(defaults_frame, text="Default Linear Speed (in/s):").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        ttk.Entry(defaults_frame, textvariable=self.setting_vars['default_linear_speed_ips'], width=15).grid(row=0, column=1, padx=5, pady=5)
         ttk.Label(defaults_frame, text="Default Cycle Count:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
         ttk.Entry(defaults_frame, textvariable=self.setting_vars['default_num_cycles'], width=15).grid(row=1, column=1, padx=5, pady=5)
+
 
         action_frame = ttk.Frame(main_frame, padding=(0, 10))
         action_frame.pack(fill="x", side="bottom")

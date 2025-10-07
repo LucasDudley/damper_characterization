@@ -24,7 +24,7 @@ class TestManager:
         """
         Runs a complete test cycle based on the provided settings dictionary.
         """
-        # 1. Extract run parameters from the settings dictionary
+        # Extract run parameters from the settings dictionary
         target_speed = settings['run_speed_rpm']
         num_cycles = settings['run_num_cycles']
         
