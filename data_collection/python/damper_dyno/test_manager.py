@@ -78,8 +78,8 @@ class TestManager:
         # Start the DAQ acquisition
         self.daq.start_acquisition(
             analog_channels=self.channels,
-            sample_rate=sample_rate,
-            chunk_size=chunk_size,
+            sample_rate=settings['sample_rate'],
+            chunk_size=settings['chunk_size'],
             callback=daq_callback
         )
 

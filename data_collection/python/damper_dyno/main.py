@@ -1,29 +1,86 @@
-from gui import DamperDynoGUI
+import os
+import logging
+import tkinter as tk
+from tkinter import messagebox
+
+try:
+    from nidaqmx.errors import DaqError
+    NIDAQMX_AVAILABLE = True
+except ImportError:
+    DaqError = Exception
+    NIDAQMX_AVAILABLE = False
+
+from main_gui import DamperDynoGUI
 from daq import DAQController
 from test_manager import TestManager
-from nidaqmx.errors import DaqError
+from settings_manager import SettingsManager
+
+def setup_logging():
+    """Configures logging to print to console and save to a file."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler("damper_dyno.log"),
+            logging.StreamHandler()
+        ]
+    )
 
 def main():
     """
     Main function to initialize and run the Damper Dyno application.
     """
-    print("Starting App")
-
-    try:
-        # Initialize the hardware controller.
-        daq = DAQController("Dev1")
-    except DaqError as e:
-        print(f"Could not connect to NI DAQ device 'Dev1'. ")
-        print(f"NI-DAQmx Error: {e}")
-        return 
-    except Exception as e:
-        print(f"An unexpected error occurred during startup: {e}")
-        input("Press Enter to exit.")
+    setup_logging()
+    logging.info("Application starting up...")
+    
+    # --- Check for NI-DAQmx Drivers ---
+    if not NIDAQMX_AVAILABLE:
+        root = tk.Tk()
+        root.withdraw()
+        logging.error("NI-DAQmx Python library not found. Please install it with 'pip install nidaqmx'.")
+        messagebox.showerror("Dependency Error", "NI-DAQmx Python library not found.\nPlease ensure it is installed to connect to the hardware.")
         return
 
+    # --- Initialize Settings Manager (loads config) ---
+    settings_manager = SettingsManager("config.json")
+    
+    # Get the DAQ device name from the loaded settings
+    daq_device_name = settings_manager.settings.get("daq_device_name", "Dev1")
+
+    # --- Initialize Hardware ---
+    try:
+        logging.info(f"Attempting to connect to DAQ device: '{daq_device_name}'")
+        daq = DAQController(daq_device_name)
+    except DaqError as e:
+        # We need a root to show a messagebox before the main GUI exists
+        root = tk.Tk()
+        root.withdraw()
+        logging.error(f"Could not connect to NI DAQ device '{daq_device_name}'. Error: {e}")
+        messagebox.showerror(
+            "Hardware Connection Error",
+            f"Could not connect to NI DAQ device '{daq_device_name}'.\n\n"
+            "Please ensure the device is connected and visible in NI-MAX.\n\n"
+            f"Error details: {e}"
+        )
+        return
+    except Exception as e:
+        root = tk.Tk()
+        root.withdraw()
+        logging.error(f"An unexpected error occurred during hardware initialization: {e}")
+        messagebox.showerror("Unexpected Error", f"An unexpected error occurred during startup:\n\n{e}")
+        return
+    
+    # --- Initialize Core Components and Run GUI ---
+    logging.info("Hardware initialized successfully. Starting GUI...")
     test_manager = TestManager(daq)
-    app = DamperDynoGUI(test_manager)
+    
+    # Inject both the test_manager and settings_manager into the GUI
+    app = DamperDynoGUI(test_manager, settings_manager)
+    
     app.mainloop()
+
+    logging.info("Application shut down.")
+
 
 if __name__ == "__main__":
     main()
