@@ -1,4 +1,4 @@
-{   
+{
     "daq_device_name": "Dev1",
     "sample_rate": 300,
     "chunk_size": 100,
@@ -17,5 +17,5 @@
     "default_num_cycles": 5,
     "crank_radius_in": 0.75,
     "rod_length_in": 6,
-    "default_linear_speed_ips": "5.0"
+    "default_linear_speed_ips": 6
 }

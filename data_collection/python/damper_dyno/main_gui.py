@@ -3,8 +3,6 @@ import queue
 import tkinter as tk
 from tkinter import ttk, font
 from ttkthemes import ThemedTk
-
-from settings_manager import SettingsManager
 from gui_tabs import RunTestTab, SettingsTab
 
 class DamperDynoGUI(ThemedTk):
