@@ -21,7 +21,7 @@ def setup_logging():
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler("damper_dyno.log"),
+            logging.FileHandler("damper_dyno.log", mode="w"),
             logging.StreamHandler()
         ]
     )
