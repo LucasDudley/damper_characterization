@@ -33,7 +33,7 @@ def main():
     setup_logging()
     logging.info("Application starting up...")
     
-    # --- Check for NI-DAQmx Drivers ---
+    # Check for NI-DAQmx Drivers
     if not NIDAQMX_AVAILABLE:
         root = tk.Tk()
         root.withdraw()
@@ -41,13 +41,13 @@ def main():
         messagebox.showerror("Dependency Error", "NI-DAQmx Python library not found.\nPlease ensure it is installed to connect to the hardware.")
         return
 
-    # --- Initialize Settings Manager (loads config) ---
+    # Initialize Settings Manager
     settings_manager = SettingsManager("config.json")
     
     # Get the DAQ device name from the loaded settings
     daq_device_name = settings_manager.settings.get("daq_device_name", "Dev1")
 
-    # --- Initialize Hardware ---
+    # Initialize Hardware
     try:
         logging.info(f"Attempting to connect to DAQ device: '{daq_device_name}'")
         daq = DAQController(daq_device_name)
@@ -70,7 +70,7 @@ def main():
         messagebox.showerror("Unexpected Error", f"An unexpected error occurred during startup:\n\n{e}")
         return
     
-    # --- Initialize Core Components and Run GUI ---
+    # Initialize Core Components and Run GUI
     logging.info("Hardware initialized successfully. Starting GUI...")
     test_manager = TestManager(daq)
     

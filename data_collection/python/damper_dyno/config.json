@@ -14,7 +14,7 @@
     "temp_slope": 40,
     "temp_offset": 0,
     "default_max_speed": 40,
-    "default_num_cycles": 10,
+    "default_num_cycles": 3,
     "crank_radius_in": 0.75,
     "rod_length_in": 6,
     "default_linear_speed_ips": 6
