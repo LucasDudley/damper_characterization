@@ -1,7 +1,6 @@
 import os
 import csv
 import datetime
-from numbers import Number
 import numpy as np
 from scipy.optimize import minimize_scalar
 import warnings
@@ -44,7 +43,7 @@ def save_test_data(data_to_save, settings):
     except Exception as e:
         print(f"An unexpected error occurred while saving the data: {e}")
 
-def convert_speed_to_duty_cycle(speed_rpm, rpm_range=[0, 100], duty_cycle_range=[10, 90]):
+def convert_speed_to_duty_cycle(speed_rpm, rpm_range, duty_cycle_range):
     """
     Convert a angular_speed in RPM to PWM duty cycle (%) using linear interpolation.
 
@@ -128,10 +127,10 @@ def required_theta_dot(V_des, Lc, R):
         s = np.sin(th)
         root_term = n**2 - s**2
 
-        # mask for valid inputs (where the term under sqrt is non-negative)
+        # mask for valid inputs (term under sqrt is non-negative)
         mask = root_term >= 0
 
-        # Initialize G (match the input shape to handle scalars and arrays correctly)
+        # Initialize G (match the input shape)
         G = np.full(th.shape, -np.inf)
 
         # Calc G for the valid values to avoid sqrt domain errors
@@ -176,4 +175,11 @@ def required_theta_dot(V_des, Lc, R):
         # Required angular velocity
         theta_dot_req = V_des / Gmax
 
-    return theta_dot_req, Gmax, theta_at_Gmax
+    return gearbox_scaling(10, theta_dot_req), Gmax, theta_at_Gmax
+
+def gearbox_scaling(gear_ratio, desired_input):
+
+    # scale the desired speed by the gear ratio
+    required_output = gear_ratio * desired_input 
+
+    return required_output

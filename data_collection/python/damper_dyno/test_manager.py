@@ -2,7 +2,8 @@ import threading
 import queue
 from utils import (
     convert_speed_to_duty_cycle, 
-    save_test_data
+    save_test_data,
+    gearbox_scaling
     )
 import numpy as np
 
@@ -20,15 +21,15 @@ class TestManager:
 
         self.channels = ["ai0", "ai1", "ai2"]
 
-    def run_test(self, settings, sample_rate=300, chunk_size=100):
+    def run_test(self, settings):
         """
         Runs a complete test cycle based on the provided settings dictionary.
         """
         # Extract run parameters from the settings dictionary
         target_speed = settings['run_speed_rpm']
-        num_cycles = settings['run_num_cycles']
+        num_cycles = gearbox_scaling(10, settings['run_num_cycles'])
         
-        print(f"Starting test with Speed: {target_speed} RPM, Cycles: {num_cycles}")
+        print(f"Starting test with Speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
         
         # Reset plots before starting
         if self.force_plot:
@@ -37,7 +38,9 @@ class TestManager:
             self.disp_plot.reset()
 
         # Configure and start the motor
-        pwm = convert_speed_to_duty_cycle(target_speed)
+        pwm = convert_speed_to_duty_cycle(target_speed, 
+                                        [settings["rpm_min"], settings["rpm_max"]],
+                                        [settings["duty_cycle_min"], settings["duty_cycle_max"]])
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
