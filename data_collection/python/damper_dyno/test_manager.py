@@ -18,7 +18,8 @@ class TestManager:
         self.disp_plot = None
         self.temp_var = None
 
-        self.channels = ["ai0", "ai1", "ai2"]
+        self.channels = ["ai0", "ai1", "ai2"] # LOAD CELL / LINPOT / IR TEMP
+        self.mode = ['DIFF', 'RSE', 'RSE']
 
     # In class TestManager:
 
@@ -77,7 +78,8 @@ class TestManager:
 
         # Start the DAQ acquisition
         self.daq.start_acquisition(
-            analog_channels=self.channels,
+            self.channels,
+            self.mode,
             sample_rate=settings['sample_rate'],
             chunk_size=settings['chunk_size'],
             callback=daq_callback

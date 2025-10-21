@@ -154,7 +154,7 @@ class DAQController:
             print(f"Error in DAQ callback: {e}")
             return 1
 
-    def start_acquisition(self, analog_channels, sample_rate, chunk_size, callback):
+    def start_acquisition(self, analog_channels, mode, sample_rate, chunk_size, callback):
         if self.ai_task:
             print("An acquisition is already running. Stop it first.")
             return
@@ -163,11 +163,18 @@ class DAQController:
         self.total_samples_acquired = 0
         try:
             self.ai_task = nidaqmx.Task("AnalogInputTask")
-            for ch in analog_channels:
-                self.ai_task.ai_channels.add_ai_voltage_chan(
-                    f"{self.device_name}/{ch}",
-                    terminal_config=TerminalConfiguration.RSE
-                )
+            for idx, ch in enumerate(analog_channels):
+                if mode[idx] == 'RSE':
+                    self.ai_task.ai_channels.add_ai_voltage_chan(
+                        f"{self.device_name}/{ch}",
+                        terminal_config=TerminalConfiguration.RSE)
+                elif mode[idx] == 'DIFF':
+                    self.ai_task.ai_channels.add_ai_voltage_chan(
+                        f"{self.device_name}/{ch}",
+                        terminal_config=TerminalConfiguration.DIFF)
+                else:
+                    print("Error: Mode not 'RSE or 'DIFF' ")
+
             self.ai_task.timing.cfg_samp_clk_timing(
                 rate=sample_rate,
                 sample_mode=AcquisitionType.CONTINUOUS
