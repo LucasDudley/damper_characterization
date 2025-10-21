@@ -19,7 +19,7 @@ class TestManager:
         self.temp_var = None
 
         self.channels = ["ai0", "ai1", "ai2"] # LOAD CELL / LINPOT / IR TEMP
-        self.mode = ['DIFF', 'RSE', 'RSE']
+        self.mode = ['DIFF', 'DIFF', 'DIFF']
 
     # In class TestManager:
 
