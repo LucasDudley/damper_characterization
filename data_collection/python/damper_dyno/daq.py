@@ -77,7 +77,7 @@ class DAQController:
         self.pwm_task.co_channels.all.co_pulse_duty_cyc = safe_duty
 
         try:
-            # Now, start the task. It will begin with the property value we just set.
+            # start the task. It will begin with the property value we just set.
             self.pwm_task.start()
         except nidaqmx.errors.DaqError as e:
             if e.error_code == -200479: # Task is already running
@@ -107,7 +107,7 @@ class DAQController:
 
     def stop_motor(self, slowdown_time=1.0):
         """
-        Gracefully stops the motor:
+        stops the motor:
         1. Set PWM duty cycle to 0 for a buffer period to allow slowdown.
         2. Then disable motor and stop/close PWM task.
         """

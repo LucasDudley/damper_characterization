@@ -19,7 +19,7 @@ class SettingsManager:
                 self.settings = json.load(f)
             print(f"Successfully loaded settings from '{self.filepath}'")
         except FileNotFoundError:
-            messagebox.showerror("Fatal Error: Configuration Missing", f"The required configuration file was not found.\n\nExpected location: {os.path.abspath(self.filepath)}")
+            messagebox.showerror("Fatal Error: Config Missing", f"The required configuration file was not found.\n\nExpected location: {os.path.abspath(self.filepath)}")
             os._exit(1)
         except json.JSONDecodeError as e:
             messagebox.showerror("Fatal Error: Configuration Corrupt", f"The configuration file is not valid JSON.\n\nError: {e}")
@@ -33,6 +33,7 @@ class SettingsManager:
     def save(self):
         """Saves the current values from the StringVars back to the config file."""
         settings_to_save = {}
+        # for all items, check and save to config.json
         for key, var in self.setting_vars.items():
             value = var.get()
             try:
@@ -46,7 +47,7 @@ class SettingsManager:
         try:
             with open(self.filepath, 'w') as f:
                 json.dump(settings_to_save, f, indent=4)
-            messagebox.showinfo("Settings Saved", "Configuration has been updated successfully.")
+            messagebox.showinfo("Settings Saved", "Config has been updated successfully.")
         except Exception as e:
             messagebox.showerror("File Write Error", f"Could not write to config file.\n\nError: {e}")
 

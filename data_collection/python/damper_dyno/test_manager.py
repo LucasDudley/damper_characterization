@@ -29,7 +29,7 @@ class TestManager:
         target_speed = settings['run_speed_rpm']
         num_cycles = gearbox_scaling(10, settings['run_num_cycles'])
         
-        print(f"Starting test with Speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
+        print(f"Starting test with speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
         
         # Reset plots before starting
         if self.force_plot:
