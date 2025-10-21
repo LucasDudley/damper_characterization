@@ -54,28 +54,43 @@ class DamperDynoGUI(ThemedTk):
         ttk.Label(analysis_tab, text="ANALYSIS TAB PLACEHOLDER", font=self.fonts['widget_font']).pack(padx=20, pady=20)
 
     def process_daq_queue(self):
-        """Drains the DAQ queue and updates the plots, preventing memory leaks."""
+        """
+        Drains the DAQ queue, processes commands, and updates plots.
+        This runs in the main GUI thread.
+        """
         MAX_POINTS = 5000  # Max number of data points to keep in memory for plotting
 
-        # Get the sample rate from settings. Add error handling for robustness.
         try:
             sample_rate = int(self.settings_manager.get_var('sample_rate').get())
         except (ValueError, tk.TclError):
-            sample_rate = 1000 #fallback
+            sample_rate = 1000 # fallback
 
         try:
             new_data_received = False
             while not self.test_manager.gui_queue.empty():
-                new_data_received = True
-                data_packet = self.test_manager.gui_queue.get_nowait()
+                packet = self.test_manager.gui_queue.get_nowait()
                 
-                self.run_tab.time_q.extend(data_packet['times'])
-                self.run_tab.force_q.extend(data_packet['force'])
-                self.run_tab.disp_q.extend(data_packet['disp'])
+                if isinstance(packet, dict) and 'command' in packet:
+                    # This is a command packet
+                    if packet['command'] == 'reset_plots':
+                        print("GUI: Received reset_plots command.")
+                        # Safely reset plots and clear data from the main thread
+                        self.run_tab.force_plot.reset()
+                        self.run_tab.disp_plot.reset()
+                        self.run_tab.time_q.clear()
+                        self.run_tab.force_q.clear()
+                        self.run_tab.disp_q.clear()
+                
+                elif isinstance(packet, dict) and 'times' in packet:
+                    # This is a data packet
+                    new_data_received = True
+                    self.run_tab.time_q.extend(packet['times'])
+                    self.run_tab.force_q.extend(packet['force'])
+                    self.run_tab.disp_q.extend(packet['disp'])
 
-                if self.run_tab.temp_var and data_packet['temp'] is not None:
-                    self.run_tab.temp_var.set(f"{data_packet['temp']:.1f} °C")
-            
+                    if self.run_tab.temp_var and packet['temp'] is not None:
+                        self.run_tab.temp_var.set(f"{packet['temp']:.1f} °C")
+                
             if new_data_received:
                 # Trim data buffers to prevent memory leak
                 self.run_tab.time_q = self.run_tab.time_q[-MAX_POINTS:]

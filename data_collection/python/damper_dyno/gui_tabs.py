@@ -54,10 +54,9 @@ class RunTestTab(ttk.Frame):
         ttk.Button(control_frame, text="Quit", style="Big.TButton", command=self.on_quit).pack(side=tk.LEFT, padx=10)
 
     def start_test(self):
-        self.time_q.clear(); self.force_q.clear(); self.disp_q.clear()
         try:
             settings_for_run = {key: var.get() for key, var in self.settings_manager.setting_vars.items()}
-            
+                        
             target_linear_speed = float(settings_for_run['default_linear_speed_ips'])
             crank_radius = float(settings_for_run['crank_radius_in'])
             rod_length = float(settings_for_run['rod_length_in'])

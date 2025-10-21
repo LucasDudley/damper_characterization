@@ -5,7 +5,6 @@ from utils import (
     save_test_data,
     gearbox_scaling
     )
-import numpy as np
 
 class TestManager:
     def __init__(self, daq_controller):
@@ -21,6 +20,8 @@ class TestManager:
 
         self.channels = ["ai0", "ai1", "ai2"]
 
+    # In class TestManager:
+
     def run_test(self, settings):
         """
         Runs a complete test cycle based on the provided settings dictionary.
@@ -31,16 +32,12 @@ class TestManager:
         
         print(f"Starting test with speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
         
-        # Reset plots before starting
-        if self.force_plot:
-            self.force_plot.reset()
-        if self.disp_plot:
-            self.disp_plot.reset()
+        self.gui_queue.put({'command': 'reset_plots'})
 
         # Configure and start the motor
         pwm = convert_speed_to_duty_cycle(target_speed, 
-                                        [settings["rpm_min"], settings["rpm_max"]],
-                                        [settings["duty_cycle_min"], settings["duty_cycle_max"]])
+                                          [settings["rpm_min"], settings["rpm_max"]],
+                                          [settings["duty_cycle_min"], settings["duty_cycle_max"]])
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
