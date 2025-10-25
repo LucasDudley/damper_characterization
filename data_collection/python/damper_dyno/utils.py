@@ -78,7 +78,7 @@ def map_voltage_to_displacement(voltage):
     """
     Maps voltage from a displacement sensor to millimeters.
     """
-    slope = 10 #mm/V
+    slope = 9.64 #mm/V
     offset = 0
     return (voltage * slope) + offset
 
@@ -86,7 +86,7 @@ def map_voltage_to_temperature(voltage):
     """
     Maps voltage from a temperature sensor to Celsius.
     """
-    slope = 40 #C/V
+    slope = 38.6 #C/V
     offset = 0
     return (voltage * slope) + offset
 
