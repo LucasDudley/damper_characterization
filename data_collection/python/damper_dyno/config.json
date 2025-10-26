@@ -17,5 +17,9 @@
     "default_num_cycles": 10,
     "crank_radius_in": 0.75,
     "rod_length_in": 6,
-    "default_linear_speed_ips": 6
+    "default_linear_speed_ips": 6,
+    "motor_max_torque_map": [
+        [0,    320,   640,    960,   1280,   1600,   1920,   2240,   2560,   2880,   3200],
+        [3.86, 3.86,  3.86,   3.86,  3.86,   3.86,   3.86,   3.86,   2.59,   1.26,   0]  
+    ]
 }

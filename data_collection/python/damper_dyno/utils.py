@@ -183,3 +183,23 @@ def gearbox_scaling(gear_ratio, desired_input):
     required_output = gear_ratio * desired_input 
 
     return required_output
+
+def map_HLFB_pwm_to_torque(HLFB_pwm, motor_speed, settings):
+    """
+    Calculates motor torque by interpolating max torque from speed 
+    and then applying a torque percentage mapped from an HLFB PWM signal.
+    """
+    motor_params = settings.get('motor_max_torque_map')
+
+    #    motor_params[0] = RPM vector
+    #    motor_params[1] = Torque vector
+    max_torque_at_speed = np.interp(motor_speed, motor_params[0], motor_params[1])
+
+    # interpolate the torque wrt the pwm signal 
+    pwm_lims = [[0.5, 0.95], [0, 100]]
+    percent_torque = np.interp(HLFB_pwm, pwm_lims[0], pwm_lims[1])
+
+    # calculate final motor torque
+    motor_torque = (percent_torque / 100.0) * max_torque_at_speed
+
+    return motor_torque
