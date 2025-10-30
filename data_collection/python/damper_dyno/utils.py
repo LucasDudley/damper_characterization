@@ -70,7 +70,7 @@ def map_voltage_to_force(voltage):
     """
     Maps voltage from a load cell to force in Newtons.
     """
-    slope = 392.5 #N/V
+    slope = 198.38 #N/V
     offset = 0
     return (voltage * slope) + offset
 
@@ -190,9 +190,6 @@ def map_HLFB_pwm_to_torque(HLFB_pwm, motor_speed, settings):
     and then applying a torque percentage mapped from an HLFB PWM signal.
     """
     motor_params = settings.get('motor_max_torque_map')
-
-    #    motor_params[0] = RPM vector
-    #    motor_params[1] = Torque vector
     max_torque_at_speed = np.interp(motor_speed, motor_params[0], motor_params[1])
 
     # interpolate the torque wrt the pwm signal 
