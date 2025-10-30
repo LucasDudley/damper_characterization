@@ -9,7 +9,6 @@ try:
 except ImportError:
     DaqError = Exception
     NIDAQMX_AVAILABLE = False
-
 from main_gui import DamperDynoGUI
 from daq import DAQController
 from test_manager import TestManager

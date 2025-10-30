@@ -21,10 +21,8 @@ class TestManager:
         self.disp_plot = None
         self.temp_var = None
 
-        self.channels = ["ai0", "ai1", "ai2"] # LOAD CELL / LINPOT / IR TEMP
+        self.channels = ["ai0", "ai1", "ai2"] # Load cell / Linpot / IR temp
         self.mode = ['DIFF', 'DIFF', 'DIFF']
-
-    # In class TestManager:
 
     def run_test(self, settings):
         """
@@ -40,8 +38,8 @@ class TestManager:
 
         # Configure and start the motor
         pwm = convert_speed_to_duty_cycle(target_speed, 
-                                          [settings["rpm_min"], settings["rpm_max"]],
-                                          [settings["duty_cycle_min"], settings["duty_cycle_max"]])
+            [settings["rpm_min"], settings["rpm_max"]],
+            [settings["duty_cycle_min"], settings["duty_cycle_max"]])
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
