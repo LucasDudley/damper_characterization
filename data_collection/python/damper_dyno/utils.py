@@ -66,28 +66,22 @@ def convert_speed_to_duty_cycle(speed_rpm, rpm_range, duty_cycle_range):
     # Clip to duty cycle range
     return max(min(duty_cycle, duty_cycle_range[1]), duty_cycle_range[0])
 
-def map_voltage_to_force(voltage):
+def map_voltage_to_force(voltage, slope, offset):
     """
     Maps voltage from a load cell to force in Newtons.
     """
-    slope = 198.38 #N/V
-    offset = 0
     return (voltage * slope) + offset
 
-def map_voltage_to_displacement(voltage):
+def map_voltage_to_displacement(voltage, slope, offset):
     """
     Maps voltage from a displacement sensor to millimeters.
     """
-    slope = 9.64 #mm/V
-    offset = 0
     return (voltage * slope) + offset
 
-def map_voltage_to_temperature(voltage):
+def map_voltage_to_temperature(voltage, slope, offset):
     """
     Maps voltage from a temperature sensor to Celsius.
     """
-    slope = 38.6 #C/V
-    offset = 0
     return (voltage * slope) + offset
 
 def required_theta_dot(V_des, Lc, R):

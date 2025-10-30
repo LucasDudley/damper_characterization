@@ -3,7 +3,10 @@ import queue
 from utils import (
     convert_speed_to_duty_cycle, 
     save_test_data,
-    gearbox_scaling
+    gearbox_scaling,
+    map_voltage_to_displacement,
+    map_voltage_to_force,
+    map_voltage_to_temperature
     )
 
 class TestManager:
@@ -57,22 +60,22 @@ class TestManager:
             disp_v = raw_values_chunk[1]
             temp_v = raw_values_chunk[2]
 
-            # The calculation is now dynamic based on the settings dictionary
-            force_physical = (force_v * settings['force_slope']) + settings['force_offset']
-            disp_physical = (disp_v * settings['disp_slope']) + settings['disp_offset']
-            temp_physical = (temp_v * settings['temp_slope']) + settings['temp_offset']
+            # scale values using mapping functions
+            force_val = map_voltage_to_force(force_v, settings['force_slope'], settings['force_offset'])
+            disp_val = map_voltage_to_displacement(disp_v, settings['disp_slope'], settings['disp_offset'])
+            temp_val = map_voltage_to_temperature(temp_v, settings['temp_slope'], settings['temp_offset'])
             
             # Log the data
             for i in range(n):
-                row = [times_chunk[i], force_v[i], force_physical[i], disp_v[i], disp_physical[i], temp_v[i], temp_physical[i]]
+                row = [times_chunk[i], force_v[i], force_val[i], disp_v[i], disp_val[i], temp_v[i], temp_val[i]]
                 data_storage.append(row)
             
             # Put data onto the queue for the GUI thread to process
             gui_data_packet = {
                 'times': times_chunk,
-                'force': force_physical.tolist(),
-                'disp': disp_physical.tolist(),
-                'temp': temp_physical[-1] if len(temp_physical) > 0 else None
+                'force': force_val.tolist(),
+                'disp': disp_val.tolist(),
+                'temp': temp_val[-1] if len(temp_val) > 0 else None
             }
             self.gui_queue.put(gui_data_packet)
 
