@@ -13,7 +13,7 @@ class DamperDynoGUI(ThemedTk):
         self.settings_manager = settings_manager
         self.title("Damper Dyno")
 
-        # --- FONT & STYLE DEFINITIONS ---
+        # font style
         self.fonts = {
             'btn_font': font.Font(family="Helvetica", size=18, weight="bold"),
             'widget_font': font.Font(family="Helvetica", size=18),
@@ -23,7 +23,7 @@ class DamperDynoGUI(ThemedTk):
         }
         self._configure_styles()
 
-        # --- INITIALIZATION ---
+        # init
         self.settings_manager.initialize_tk_vars(master=self)
         self._after_id = None
         self.create_gui()
