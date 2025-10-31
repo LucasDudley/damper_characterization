@@ -187,10 +187,10 @@ def map_HLFB_pwm_to_torque(HLFB_pwm, motor_speed, settings):
     max_torque_at_speed = np.interp(motor_speed, motor_params[0], motor_params[1])
 
     # interpolate the torque wrt the pwm signal 
-    pwm_lims = [[0.5, 0.95], [0, 100]]
-    percent_torque = np.interp(HLFB_pwm, pwm_lims[0], pwm_lims[1])
+    pwm_lims = [[5, 95], [-1, 1]]
+    percent_torque = np.interp(HLFB_pwm, pwm_lims[0], pwm_lims[1]) # map the duty cycle percent to a scalar
 
-    # calculate final motor torque
-    motor_torque = (percent_torque / 100.0) * max_torque_at_speed
+    # calculate final motor torque from scalar mapping
+    motor_torque = percent_torque * max_torque_at_speed
 
     return motor_torque
