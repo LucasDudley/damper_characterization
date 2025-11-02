@@ -115,13 +115,6 @@ class SettingsTab(ttk.Frame):
         ttk.Entry(ranges_frame, textvariable=self.settings_manager.get_var('duty_cycle_min'), width=10).grid(row=1, column=1, padx=5, pady=5)
         ttk.Label(ranges_frame, text="to").grid(row=1, column=2, padx=(10, 10))
         ttk.Entry(ranges_frame, textvariable=self.settings_manager.get_var('duty_cycle_max'), width=10).grid(row=1, column=3, padx=5, pady=5)
-
-        # Sensor Calibration
-        cal_frame = ttk.LabelFrame(parent, text="Sensor Calibration (Voltage Mapping)", padding=(15, 10))
-        cal_frame.pack(fill="x", pady=5)
-        # ... (Add all sensor calibration widgets here, following the pattern)
-        ttk.Label(cal_frame, text="Force Slope:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
-        ttk.Entry(cal_frame, textvariable=self.settings_manager.get_var('force_slope'), width=15).grid(row=1, column=1, padx=5, pady=5)
         
         # Test Defaults
         defaults_frame = ttk.LabelFrame(parent, text="Test Defaults", padding=(15, 10))

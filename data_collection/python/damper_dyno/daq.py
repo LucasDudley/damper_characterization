@@ -77,17 +77,16 @@ class DAQController:
         self.pwm_task.co_channels.all.co_pulse_duty_cyc = safe_duty
 
         try:
-            # start the task. It will begin with the property value we just set.
             self.pwm_task.start()
         except nidaqmx.errors.DaqError as e:
-            if e.error_code == -200479: # Task is already running
+            if e.error_code == -200479:
                 print("Warning: Motor task was already running. Updating duty cycle instead.")
                 self.update_motor_duty_cycle(duty_cycle)
             else:
                 raise
 
     def update_motor_duty_cycle(self, duty_cycle: float):
-        """Updates the duty cycle of an ALREADY RUNNING PWM task using task.write()."""
+        """Updates the duty cycle of an already running task using task.write()."""
         if self.pwm_task is None or self.pwm_frequency is None:
             print("Error: PWM task or frequency is not configured.")
             return

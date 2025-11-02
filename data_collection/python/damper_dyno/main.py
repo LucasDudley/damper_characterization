@@ -51,7 +51,6 @@ def main():
         logging.info(f"Attempting to connect to DAQ device: '{daq_device_name}'")
         daq = DAQController(daq_device_name)
     except DaqError as e:
-        # We need a root to show a messagebox before the main GUI exists (to show error)
         root = tk.Tk()
         root.withdraw()
         logging.error(f"Could not connect to NI DAQ device '{daq_device_name}'. Error: {e}")
@@ -72,8 +71,7 @@ def main():
     # Initialize Core Components and Run GUI
     logging.info("Hardware initialized successfully.")
     test_manager = TestManager(daq) # feed daq object into test mangager object
-    
-    # Inject both the test_manager and settings_manager into the GUI object
+
     app = DamperDynoGUI(test_manager, settings_manager)
     
     app.mainloop()
