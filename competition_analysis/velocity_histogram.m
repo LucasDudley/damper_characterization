@@ -130,12 +130,12 @@ xline(mu_env+3*sigma_env,'b--','LineWidth',1.2, ...
 xline(mu_env-3*sigma_env,'b--','LineWidth',1.2,'HandleVisibility','off');
 
 % format
-xlabel('Wheel Velocity [in/s]');
-ylabel('Percentage [%]')
+ylabel('\bfWheel Velocity \rm[\itin/s\rm]', 'Color', 'k');
+xlabel('\bfPercentage \rm[\it%\rm]', 'Color', 'k');
 ylim([0 max(h.Values)*1.2])
 yt = yticks; 
 yticklabels(yt*100)
-grid on
+grid off
 legend('Location','NorthWest')
 xlim([envelope(1), envelope(2)])
 box off
