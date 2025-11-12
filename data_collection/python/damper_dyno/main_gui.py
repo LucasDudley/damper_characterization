@@ -92,11 +92,18 @@ class DamperDynoGUI(ThemedTk):
                         self.run_tab.temp_var.set(f"{packet['temp']:.1f} °C")
                 
             if new_data_received:
-                # Trim data buffers to prevent memory leak
-                self.run_tab.time_q = self.run_tab.time_q[-MAX_POINTS:]
-                self.run_tab.force_q = self.run_tab.force_q[-MAX_POINTS:]
-                self.run_tab.disp_q = self.run_tab.disp_q[-MAX_POINTS:]
-
+                # Trim data buffers but keep enough history for the plot window
+                if len(self.run_tab.time_q) > MAX_POINTS:
+                    trim_amount = len(self.run_tab.time_q) - MAX_POINTS
+                    
+                    self.run_tab.time_q = self.run_tab.time_q[trim_amount:]
+                    self.run_tab.force_q = self.run_tab.force_q[trim_amount:]
+                    self.run_tab.disp_q = self.run_tab.disp_q[trim_amount:]
+                    
+                    #Adjust the plot's tracking index
+                    self.run_tab.force_plot.last_idx = max(0, self.run_tab.force_plot.last_idx - trim_amount)
+                    self.run_tab.disp_plot.last_idx = max(0, self.run_tab.disp_plot.last_idx - trim_amount)
+                
                 # Update plots with the trimmed data
                 self.run_tab.force_plot.update(
                     self.run_tab.time_q, 
