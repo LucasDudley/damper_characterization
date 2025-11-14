@@ -30,7 +30,7 @@ class RealTimePlot:
         self.ax.grid()
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
         
-        # Secondary axis setup (optional input)
+        # Secondary axis setup (optional)
         self.ax2 = None
         self.secondary_lines = []
         self.secondary_signals = secondary_signals
@@ -87,7 +87,7 @@ class RealTimePlot:
 
             line.set_data(xdata, ydata)
 
-        # Update secondary axis lines if they exist
+        # Update secondary axis lines
         if self.ax2 is not None:
             for i, line in enumerate(self.secondary_lines):
                 xdata, ydata = line.get_data()
@@ -112,14 +112,14 @@ class RealTimePlot:
         Resets the plot for a new test run by clearing all line data
         and resetting the internal index.
         """
-        # Reset the index that tracks plotted data
+        # Reset the index for data
         self.last_idx = 0
         
-        # Clear the data from primary axis lines
+        # Clear the data from primary axis
         for line in self.lines:
             line.set_data([], [])
         
-        # Clear the data from secondary axis lines if they exist
+        # Clear the data from secondary axis
         if self.ax2 is not None:
             for line in self.secondary_lines:
                 line.set_data([], [])

@@ -32,7 +32,7 @@ def main():
     setup_logging()
     logging.info("Application starting")
     
-    # Check for NI-DAQmx drivers available on device
+    # Check for NI-DAQmx drivers on device
     if not NIDAQMX_AVAILABLE:
         root = tk.Tk()
         root.withdraw()
