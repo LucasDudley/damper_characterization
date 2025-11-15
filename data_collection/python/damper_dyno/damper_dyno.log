@@ -1,3 +1,3 @@
-2025-11-14 19:35:51,677 [INFO] Application starting
-2025-11-14 19:35:51,677 [INFO] Attempting to connect to DAQ device: 'Dev1'
-2025-11-14 19:35:51,678 [INFO] Hardware initialized successfully.
+2025-11-14 19:55:29,990 [INFO] Application starting
+2025-11-14 19:55:29,991 [INFO] Attempting to connect to DAQ device: 'Dev1'
+2025-11-14 19:55:29,991 [INFO] Hardware initialized successfully.

@@ -5,7 +5,7 @@ s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure ba
 
 % Inputs
 folder = "D:\AME441_Code\damper_characterization\Test_Data\Phase1_temp_sensitivity";
-file   = "t1_1_1_18_18_s6_n10_100psi";
+file   = "dyno_test_2025-11-14_19-55-43";
 filename = fullfile(folder, file);
 
 %read data
