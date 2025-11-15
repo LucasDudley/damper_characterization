@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.dates as mdates
+import matplotlib.cm as cm
+import random
 import datetime
-
 
 class RealTimePlot:
     def __init__(self, master, signal_names, y_label="Values", y_range=(-100, 100),
@@ -135,51 +136,45 @@ class RealTimePlot:
         self.canvas.draw_idle()
 
 
-
 class RealTimeScatter:
-    """
-    Real-time XY scatter/line plot.
-    X does NOT scroll. Limits are fixed.
-    """
-
     def __init__(self, master, x_label, y_label,
-                 x_range, y_range, figsize=(6, 4)):
+                 x_range, y_range, figsize=(6, 4), marker='o', dot_size=10, color='orange'):
         
         self.fig, self.ax = plt.subplots(figsize=figsize)
-        
-        # Empty line
-        self.line, = self.ax.plot([], [], lw=1)
+        self.marker = marker
+        self.dot_size = dot_size
+        self.color = color
 
-        # Labels + fixed limits
+        self.x_data = []
+        self.y_data = []
+
+        self.scatter = self.ax.scatter([], [], marker=self.marker, color=self.color, s=self.dot_size)
+
         self.ax.set_xlabel(x_label)
         self.ax.set_ylabel(y_label)
         self.ax.set_xlim(*x_range)
         self.ax.set_ylim(*y_range)
         self.ax.grid()
 
-        # Attach to Tk
         self.canvas = FigureCanvasTkAgg(self.fig, master=master)
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
-
-        # Buffers
-        self.x_data = []
-        self.y_data = []
+        self.toolbar = NavigationToolbar2Tk(self.canvas, master)
+        self.toolbar.update()
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
 
     def update(self, x_samples, y_samples):
-        """Append new batches of X & Y samples and redraw."""
-        
         if len(x_samples) != len(y_samples):
-            return  # avoid mismatch
-
+            return
         self.x_data.extend(x_samples)
         self.y_data.extend(y_samples)
-
-        self.line.set_data(self.x_data, self.y_data)
+        self.scatter.set_offsets(list(zip(self.x_data, self.y_data)))
         self.canvas.draw_idle()
 
     def reset(self):
-        """Clear all data and reset the plot."""
         self.x_data = []
         self.y_data = []
-        self.line.set_data([], [])
+        self.scatter.set_offsets([])
+        self.scatter.set_color(self.color)
         self.canvas.draw_idle()
+
+

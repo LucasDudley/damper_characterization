@@ -4,7 +4,7 @@ import queue
 import tkinter as tk
 from tkinter import ttk, font
 from ttkthemes import ThemedTk
-from gui_tabs import RunTestTab, SettingsTab
+from gui_tabs import RunTestTab, SettingsTab, AnalysisTab
 
 class DamperDynoGUI(ThemedTk):
     def __init__(self, test_manager, settings_manager):
@@ -47,19 +47,19 @@ class DamperDynoGUI(ThemedTk):
 
         self.run_tab = RunTestTab(notebook, self.test_manager, self.settings_manager, self.fonts, on_quit=self.on_closing)
         settings_tab = SettingsTab(notebook, self.settings_manager, self.fonts)
-        analysis_tab = ttk.Frame(notebook)
+        self.analysis_tab = AnalysisTab(notebook, self.run_tab, self.fonts)
 
         notebook.add(self.run_tab, text="Run Test")
         notebook.add(settings_tab, text="Settings")
-        notebook.add(analysis_tab, text="Analysis")
-        ttk.Label(analysis_tab, text="ANALYSIS TAB PLACEHOLDER", font=self.fonts['widget_font']).pack(padx=20, pady=20)
+        notebook.add(self.analysis_tab, text="Analysis")
+
 
     def process_daq_queue(self):
         """
         Drains the DAQ queue, processes commands, and updates plots.
         This runs in the main GUI thread.
         """
-        MAX_POINTS = 5000  # Max number of data points to keep in memory for plotting
+        MAX_POINTS = 5000  # Max num data points to keep in memory for plots
 
         try:
             sample_rate = int(self.settings_manager.get_var('sample_rate').get())
@@ -83,7 +83,10 @@ class DamperDynoGUI(ThemedTk):
                         self.run_tab.force_q.clear()
                         self.run_tab.disp_q.clear()
                         self.run_tab.vel_q.clear()
-                
+
+                        # Reset analysis tab with new color
+                        self.analysis_tab.new_run()
+                                    
                 elif isinstance(packet, dict) and 'times' in packet:
                     # data packet
                     new_data_received = True
@@ -109,6 +112,7 @@ class DamperDynoGUI(ThemedTk):
                     #update the plot's tracking index
                     self.run_tab.force_plot.last_idx = max(0, self.run_tab.force_plot.last_idx - trim_amount)
                     self.run_tab.disp_plot.last_idx = max(0, self.run_tab.disp_plot.last_idx - trim_amount)
+
                 
                 # update plots with the trimmed data
                 self.run_tab.force_plot.update(
@@ -121,6 +125,8 @@ class DamperDynoGUI(ThemedTk):
                     [self.run_tab.disp_q, self.run_tab.vel_q], 
                     sample_rate=sample_rate
                 )
+
+                self.analysis_tab.update_plots()
         
         except queue.Empty:
             pass

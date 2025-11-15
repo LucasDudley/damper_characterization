@@ -3,8 +3,10 @@ from tkinter import ttk, filedialog, messagebox
 import threading
 import math
 import logging
-from plots import RealTimePlot
+from plots import RealTimePlot, RealTimeScatter
 from utils import required_theta_dot
+import matplotlib.cm as cm
+import random
 
 class RunTestTab(ttk.Frame):
     """The main tab for running tests, displaying plots, and controlling the dyno."""
@@ -150,3 +152,50 @@ class SettingsTab(ttk.Frame):
         dir_name = filedialog.askdirectory()
         if dir_name:
             self.settings_manager.get_var('output_dir').set(dir_name)
+
+
+class AnalysisTab(ttk.Frame):
+    """Analysis tab with Force vs Displacement and Force vs Velocity plots."""
+    
+    def __init__(self, parent, run_tab, fonts):
+        super().__init__(parent)
+        self.run_tab = run_tab
+        self.fonts = fonts
+        self._create_widgets()
+    
+    def _create_widgets(self):
+        # Force vs Displacement
+        force_disp_frame = ttk.LabelFrame(self, text="Force vs Displacement", padding=(10, 10))
+        force_disp_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.force_disp_plot = RealTimeScatter(
+            master=force_disp_frame,
+            x_label="Displacement [mm]",
+            y_label="Force [N]",
+            x_range=(0, 40),
+            y_range=(-1000, 1000),
+            color='orange'
+        )
+
+        # Force vs Velocity
+        force_vel_frame = ttk.LabelFrame(self, text="Force vs Velocity", padding=(10, 10))
+        force_vel_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
+        self.force_vel_plot = RealTimeScatter(
+            master=force_vel_frame,
+            x_label="Velocity [mm/s]",
+            y_label="Force [N]",
+            x_range=(-200, 200),
+            y_range=(-1000, 1000),
+            color='orange'
+        )
+
+    def reset_plots(self):
+        """Call at the start of a new run to clear plots."""
+        self.force_disp_plot.reset()
+        self.force_vel_plot.reset()
+
+    def update_plots(self):
+        """Update plots with data from run_tab."""
+        if self.run_tab.time_q:
+            self.force_disp_plot.update(self.run_tab.disp_q, self.run_tab.force_q)
+            self.force_vel_plot.update(self.run_tab.vel_q, self.run_tab.force_q)
+
