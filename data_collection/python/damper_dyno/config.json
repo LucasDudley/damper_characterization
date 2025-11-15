@@ -7,7 +7,7 @@
     "rpm_max": 1200,
     "duty_cycle_min": 0,
     "duty_cycle_max": 100,
-    "force_slope": 198.38,
+    "force_slope": -198.38,
     "force_offset": 0,
     "disp_slope": 9.64,
     "disp_offset": 0,
