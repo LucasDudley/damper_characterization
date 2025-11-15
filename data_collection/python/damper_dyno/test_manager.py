@@ -1,6 +1,8 @@
 import threading
 import queue
 import logging
+from scipy.signal import butter, lfilter
+import numpy as np
 from utils import (
     convert_speed_to_duty_cycle, 
     save_test_data,
@@ -45,16 +47,27 @@ class TestManager:
         self.daq.start_motor(pwm)
 
         # Setup for data logging
-        headers = ["Timestamp", "Force (V)", "Force (N)", "Displacement (V)", "Displacement (mm)", "Temperature (V)", "Temperature (C)"]
+        headers = ["Timestamp",
+                   "Force (V)", "Force (N)", 
+                   "Displacement (V)", "Displacement (mm)", 
+                   "Temperature (V)", "Temperature (C)",
+                   "Velocity (mm/s)"]
         data_storage = [headers]
 
-        # This callback function runs in the DAQ's background thread
+        # Low-pass filter for displacement → velocity pipeline
+        fs = settings['sample_rate']
+        fc = settings['lpf_cutoff']  # Hz
+        b, a = butter(2, fc / (fs / 2), btype='low') # Butterworth 2nd-order LPF
+        lpf_state = np.zeros(max(len(a), len(b)) - 1) # Filter state (persist across callback chunks)
+
+        # prev filtered displacement sample for velocity numerical derivative
+        prev_disp = None
+
+        # This callback fcn runs in the DAQ's background thread
         def daq_callback(times, raw_values):
             n = min(len(times), raw_values.shape[1])
             times_chunk = times[:n]
             raw_values_chunk = raw_values[:, :n]
-
-            # Use the passed-in settings from the GUI for mapping
             force_v = raw_values_chunk[0]
             disp_v = raw_values_chunk[1]
             temp_v = raw_values_chunk[2]
@@ -63,22 +76,44 @@ class TestManager:
             force_val = map_voltage_to_force(force_v, settings['force_slope'], settings['force_offset'])
             disp_val = map_voltage_to_displacement(disp_v, settings['disp_slope'], settings['disp_offset'])
             temp_val = map_voltage_to_temperature(temp_v, settings['temp_slope'], settings['temp_offset'])
+
+            # low-pass filter
+            nonlocal lpf_state, prev_disp
+
+            disp_filt, lpf_state = lfilter(b, a, disp_val, zi=lpf_state)
+
+            # build previous-sample vector for numerical derivative
+            if prev_disp is None:
+                x_prev = np.concatenate(([disp_filt[0]], disp_filt[:-1]))
+            else:
+                x_prev = np.concatenate(([prev_disp], disp_filt[:-1]))
+
+            vel = (disp_filt - x_prev) * fs
+            prev_disp = disp_filt[-1]
+
             
             # Log the data
             for i in range(n):
-                row = [times_chunk[i], force_v[i], force_val[i], disp_v[i], disp_val[i], temp_v[i], temp_val[i]]
+                row = [
+                        times_chunk[i],
+                        force_v[i], force_val[i],
+                        disp_v[i], disp_val[i],
+                        temp_v[i], temp_val[i],
+                        vel[i] 
+                    ]
                 data_storage.append(row)
             
-            # Put data onto the queue for the GUI thread to process
+            # Put data onto the queue for the GUI thread
             gui_data_packet = {
                 'times': times_chunk,
                 'force': force_val.tolist(),
                 'disp': disp_val.tolist(),
+                'vel': vel.tolist(),
                 'temp': temp_val[-1] if len(temp_val) > 0 else None
             }
             self.gui_queue.put(gui_data_packet)
 
-        # Start the DAQ acquisition
+        # Start DAQ acquisition
         self.daq.start_acquisition(
             self.channels,
             self.mode,
@@ -87,7 +122,7 @@ class TestManager:
             callback=daq_callback
         )
 
-        # This thread controls the duration of the test
+        # thread to control test duration
         def test_thread():
             test_duration = num_cycles / target_speed * 60.0
             threading.Event().wait(test_duration)
@@ -97,7 +132,7 @@ class TestManager:
                 self.daq.stop_motor()
                 self.daq.stop_acquisition()
                 
-                # Make sure the save utility can handle the settings dictionary
+                # Make sure the save fcn can handle the settings dictionary
                 save_test_data(data_storage, settings) 
 
         # Run the duration controller in the background
