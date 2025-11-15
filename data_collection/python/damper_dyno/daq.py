@@ -5,6 +5,7 @@ import threading
 from nidaqmx.constants import TerminalConfiguration, AcquisitionType
 from nidaqmx.types import CtrFreq
 import time
+import logging
 
 class DAQController:
     def __init__(self, device_name="Dev1"):
@@ -33,7 +34,7 @@ class DAQController:
             self.do_task.start()
             self.do_task.write(True)
         except nidaqmx.errors.DaqError as e:
-            print(f"Error enabling motor: {e}")
+            logging.info(f"Error enabling motor: {e}")
             if self.do_task:
                 self.do_task.close()
             self.do_task = None
@@ -43,7 +44,7 @@ class DAQController:
             try:
                 self.do_task.write(False)
             except nidaqmx.errors.DaqError as e:
-                print(f"Warning writing LOW to motor enable pin: {e}")
+                logging.info(f"Warning writing LOW to motor enable pin: {e}")
             finally:
                 self.do_task.stop()
                 self.do_task.close()
@@ -73,14 +74,14 @@ class DAQController:
             
         # Before starting the task, set the duty cycle as a property.
         safe_duty = max(min(duty_cycle / 100.0, 1.0), 0.0)
-        print(f"Setting initial PWM property to Duty Cycle: {safe_duty}")
+        logging.info(f"Setting initial PWM property to Duty Cycle: {safe_duty}")
         self.pwm_task.co_channels.all.co_pulse_duty_cyc = safe_duty
 
         try:
             self.pwm_task.start()
         except nidaqmx.errors.DaqError as e:
             if e.error_code == -200479:
-                print("Warning: Motor task was already running. Updating duty cycle instead.")
+                logging.info("Warning: Motor task was already running. Updating duty cycle instead.")
                 self.update_motor_duty_cycle(duty_cycle)
             else:
                 raise
@@ -88,21 +89,21 @@ class DAQController:
     def update_motor_duty_cycle(self, duty_cycle: float):
         """Updates the duty cycle of an already running task using task.write()."""
         if self.pwm_task is None or self.pwm_frequency is None:
-            print("Error: PWM task or frequency is not configured.")
+            logging.info("Error: PWM task or frequency is not configured.")
             return
 
         safe_duty = max(min(duty_cycle / 100.0, 1.0), 0.0) 
         
-        print(f"Writing to running task >> Freq: {self.pwm_frequency} Hz, Duty Cycle: {safe_duty}")
+        logging.info(f"Writing to running task >> Freq: {self.pwm_frequency} Hz, Duty Cycle: {safe_duty}")
         
         try:
             # Create the required CtrFreq object
             sample = CtrFreq(freq=self.pwm_frequency, duty_cycle=safe_duty)
             # Write the sample to the running task
             self.pwm_task.write(sample, timeout=2.0)
-            print("Successfully wrote new CtrFreq sample to PWM task.")
+            logging.info("Successfully wrote new CtrFreq sample to PWM task.")
         except nidaqmx.errors.DaqError as e:
-            print(f"Error writing new CtrFreq sample: {e}")
+            logging.info(f"Error writing new CtrFreq sample: {e}")
 
     def stop_motor(self, slowdown_time=1.0):
         """
@@ -112,12 +113,12 @@ class DAQController:
         """
         if self.pwm_task is not None:
             try:
-                print(f"Motor Ramp Down")
+                logging.info(f"Motor Ramp Down")
                 # Write a near-zero duty cycle to let it coast down
                 self.update_motor_duty_cycle(1e-2)
                 time.sleep(slowdown_time)
             except Exception as e:
-                print(f"Warning while ramping down PWM: {e}")
+                logging.info(f"Warning while ramping down PWM: {e}")
 
         # Disable motor (digital output LOW)
         self.disable_motor()
@@ -128,7 +129,7 @@ class DAQController:
                 self.pwm_task.stop()
                 self.pwm_task.close()
             except Exception as e:
-                print(f"Warning stopping PWM task: {e}")
+                logging.info(f"Warning stopping PWM task: {e}")
             finally:
                 self.pwm_task = None
 
@@ -150,12 +151,12 @@ class DAQController:
                 self.data_callback(times, data)
             return 0
         except Exception as e:
-            print(f"Error in DAQ callback: {e}")
+            logging.info(f"Error in DAQ callback: {e}")
             return 1
 
     def start_acquisition(self, analog_channels, mode, sample_rate, chunk_size, callback):
         if self.ai_task:
-            print("An acquisition is already running. Stop it first.")
+            logging.info("An acquisition is already running. Stop it first.")
             return
         self.data_callback = callback
         self.sample_rate = sample_rate
@@ -172,7 +173,7 @@ class DAQController:
                         f"{self.device_name}/{ch}",
                         terminal_config=TerminalConfiguration.DIFF)
                 else:
-                    print("Error: Mode not 'RSE or 'DIFF' ")
+                    logging.info("Error: Mode not 'RSE or 'DIFF' ")
 
             self.ai_task.timing.cfg_samp_clk_timing(
                 rate=sample_rate,
@@ -183,9 +184,9 @@ class DAQController:
             )
             self.start_time = datetime.datetime.now()
             self.ai_task.start()
-            print("DAQ acquisition started successfully.")
+            logging.info("DAQ acquisition started successfully.")
         except Exception as e:
-            print(f"Failed to start DAQ acquisition: {e}")
+            logging.info(f"Failed to start DAQ acquisition: {e}")
             if self.ai_task:
                 self.ai_task.close()
                 self.ai_task = None
@@ -196,9 +197,9 @@ class DAQController:
                 self.ai_task.stop()
                 self.ai_task.register_every_n_samples_acquired_into_buffer_event(0, None)
                 self.ai_task.close()
-                print("DAQ acquisition stopped.")
+                logging.info("DAQ acquisition stopped.")
             except Exception as e:
-                print(f"Warning stopping AI task: {e}")
+                logging.info(f"Warning stopping AI task: {e}")
             finally:
                 self.ai_task = None
         self.data_callback = None
@@ -208,7 +209,7 @@ class DAQController:
         self.stop_acquisition()
 
     def emergency_stop(self):
-        print("⚠ DAQ E-STOP ⚠")
+        logging.info("⚠ DAQ E-STOP ⚠")
 
         # Immediately disable motor 
         self.disable_motor()
@@ -219,7 +220,7 @@ class DAQController:
                 self.pwm_task.stop()
                 self.pwm_task.close()
             except Exception as e:
-                print(f"Warning stopping PWM task during E-STOP: {e}")
+                logging.info(f"Warning stopping PWM task during E-STOP: {e}")
             finally:
                 self.pwm_task = None
 

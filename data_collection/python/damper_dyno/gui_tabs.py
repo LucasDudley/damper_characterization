@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import threading
 import math
+import logging
 from plots import RealTimePlot
 from utils import required_theta_dot
 
@@ -63,7 +64,7 @@ class RunTestTab(ttk.Frame):
 
             theta_dot_rad_s, _, __ = required_theta_dot(V_des=target_linear_speed, Lc=rod_length, R=crank_radius)
             calculated_rpm = theta_dot_rad_s * 60 / (2 * math.pi)
-            print(f"Target linear speed: {target_linear_speed} in/s => Calculated RPM: {calculated_rpm:.2f}")
+            logging.info(f"Target linear speed: {target_linear_speed} in/s => Calculated RPM: {calculated_rpm:.2f}")
 
             for key, value in settings_for_run.items():
                 if key != 'output_dir':
@@ -80,7 +81,7 @@ class RunTestTab(ttk.Frame):
         threading.Thread(target=self.test_manager.run_test, args=(settings_for_run,), daemon=True).start()
 
     def emergency_stop(self):
-        print("⚠ EMERGENCY STOP PRESSED ⚠")
+        logging.info("⚠ EMERGENCY STOP PRESSED ⚠")
         self.test_manager.daq.emergency_stop()
 
 

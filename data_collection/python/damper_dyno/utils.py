@@ -1,6 +1,7 @@
 import os
 import csv
 import datetime
+import logging
 import numpy as np
 from scipy.optimize import minimize_scalar
 import warnings
@@ -17,7 +18,7 @@ def save_test_data(data_to_save, settings):
         # Get the output directory from the settings dictionary.
         output_dir = settings.get('output_dir')
         if not output_dir:
-            print("Error: 'output_dir' not found in settings. Cannot save data.")
+            logging.error("Error: 'output_dir' not found in settings. Cannot save data.")
             return
 
         os.makedirs(output_dir, exist_ok=True)
@@ -29,19 +30,19 @@ def save_test_data(data_to_save, settings):
         # Combine the directory and filename into a full path.
         full_filepath = os.path.join(output_dir, filename)
 
-        print(f"Saving test data to: {full_filepath}")
+        logging.info(f"Saving test data to: {full_filepath}")
 
         # Write the data to the CSV file using the 'csv' module.
         with open(full_filepath, "w", newline="") as f:
             writer = csv.writer(f)
             writer.writerows(data_to_save)
         
-        print("Data saved successfully.")
+        logging.info("Data saved successfully.")
 
     except KeyError:
-        print("Error: The provided settings dictionary is missing the 'output_dir' key.")
+        logging.error("Error: The provided settings dictionary is missing the 'output_dir' key.")
     except Exception as e:
-        print(f"An unexpected error occurred while saving the data: {e}")
+        logging.error(f"An unexpected error occurred while saving the data: {e}")
 
 def convert_speed_to_duty_cycle(speed_rpm, rpm_range, duty_cycle_range):
     """

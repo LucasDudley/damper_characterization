@@ -1,3 +1,4 @@
-2025-11-14 20:40:18,469 [INFO] Application starting
-2025-11-14 20:40:18,470 [INFO] Attempting to connect to DAQ device: 'Dev1'
-2025-11-14 20:40:18,470 [INFO] Hardware initialized successfully.
+2025-11-15 14:32:41,638 [INFO] Application starting
+2025-11-15 14:32:41,639 [INFO] Successfully loaded settings from 'config.json'
+2025-11-15 14:32:41,639 [INFO] Attempting to connect to DAQ device: 'Dev1'
+2025-11-15 14:32:41,640 [INFO] Hardware initialized successfully.

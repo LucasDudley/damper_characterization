@@ -1,5 +1,6 @@
 import threading
 import queue
+import logging
 from utils import (
     convert_speed_to_duty_cycle, 
     save_test_data,
@@ -32,7 +33,7 @@ class TestManager:
         target_speed = settings['run_speed_rpm']
         num_cycles = gearbox_scaling(10, settings['run_num_cycles'])
         
-        print(f"Starting test with speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
+        logging.info(f"Starting test with speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
         
         self.gui_queue.put({'command': 'reset_plots'})
 
@@ -92,7 +93,7 @@ class TestManager:
             threading.Event().wait(test_duration)
 
             if self.daq.ai_task is not None:
-                print("Test duration finished. Stopping motor and acquisition.")
+                logging.info("Test duration finished. Stopping motor and acquisition.")
                 self.daq.stop_motor()
                 self.daq.stop_acquisition()
                 

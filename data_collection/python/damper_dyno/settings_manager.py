@@ -2,6 +2,7 @@ import os
 import json
 import tkinter as tk
 from tkinter import messagebox
+import logging
 
 class SettingsManager:
     """Handles loading, saving, and managing application settings from a JSON file."""
@@ -17,7 +18,8 @@ class SettingsManager:
         try:
             with open(self.filepath, 'r') as f:
                 self.settings = json.load(f)
-            print(f"Successfully loaded settings from '{self.filepath}'")
+
+            logging.info(f"Successfully loaded settings from '{self.filepath}'")
         except FileNotFoundError:
             messagebox.showerror("Fatal Error: Config Missing", f"The required configuration file was not found.\n\nExpected location: {os.path.abspath(self.filepath)}")
             os._exit(1)
@@ -54,7 +56,7 @@ class SettingsManager:
     def revert(self):
         """Discards unsaved changes by reloading from the config file."""
         if messagebox.askyesno("Revert Unsaved Changes", "Are you sure you want to discard unsaved changes?"):
-            print("Reverting settings to last saved state.")
+            logging.info("Reverting settings to last saved state.")
             self._load_data_from_file()
             for key, val in self.settings.items():
                 if key in self.setting_vars:

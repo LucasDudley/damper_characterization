@@ -1,4 +1,5 @@
 import os
+import logging
 import queue
 import tkinter as tk
 from tkinter import ttk, font
@@ -73,7 +74,7 @@ class DamperDynoGUI(ThemedTk):
                 if isinstance(packet, dict) and 'command' in packet:
                     # This is a command packet
                     if packet['command'] == 'reset_plots':
-                        print("GUI: Received reset_plots command.")
+                        logging.info("GUI: Received reset_plots command.")
                         # Safely reset plots and clear data from the main thread
                         self.run_tab.force_plot.reset()
                         self.run_tab.disp_plot.reset()
@@ -125,7 +126,7 @@ class DamperDynoGUI(ThemedTk):
         """Handles the complete application shutdown sequence."""
         if self._after_id: self.after_cancel(self._after_id)
         try: self.test_manager.daq.close()
-        except Exception as e: print(f"Error during DAQ cleanup: {e}")
+        except Exception as e: logging.error(f"Error during DAQ cleanup: {e}")
         finally:
             self.destroy()
             os._exit(0)
