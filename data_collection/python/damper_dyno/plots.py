@@ -133,3 +133,53 @@ class RealTimePlot:
             
         # Redraw the empty canvas
         self.canvas.draw_idle()
+
+
+
+class RealTimeScatter:
+    """
+    Real-time XY scatter/line plot.
+    X does NOT scroll. Limits are fixed.
+    """
+
+    def __init__(self, master, x_label, y_label,
+                 x_range, y_range, figsize=(6, 4)):
+        
+        self.fig, self.ax = plt.subplots(figsize=figsize)
+        
+        # Empty line
+        self.line, = self.ax.plot([], [], lw=1)
+
+        # Labels + fixed limits
+        self.ax.set_xlabel(x_label)
+        self.ax.set_ylabel(y_label)
+        self.ax.set_xlim(*x_range)
+        self.ax.set_ylim(*y_range)
+        self.ax.grid()
+
+        # Attach to Tk
+        self.canvas = FigureCanvasTkAgg(self.fig, master=master)
+        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
+        # Buffers
+        self.x_data = []
+        self.y_data = []
+
+    def update(self, x_samples, y_samples):
+        """Append new batches of X & Y samples and redraw."""
+        
+        if len(x_samples) != len(y_samples):
+            return  # avoid mismatch
+
+        self.x_data.extend(x_samples)
+        self.y_data.extend(y_samples)
+
+        self.line.set_data(self.x_data, self.y_data)
+        self.canvas.draw_idle()
+
+    def reset(self):
+        """Clear all data and reset the plot."""
+        self.x_data = []
+        self.y_data = []
+        self.line.set_data([], [])
+        self.canvas.draw_idle()
