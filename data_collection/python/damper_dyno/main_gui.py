@@ -72,40 +72,45 @@ class DamperDynoGUI(ThemedTk):
                 packet = self.test_manager.gui_queue.get_nowait()
                 
                 if isinstance(packet, dict) and 'command' in packet:
-                    # This is a command packet
                     if packet['command'] == 'reset_plots':
                         logging.info("GUI: Received reset_plots command.")
-                        # Safely reset plots and clear data from the main thread
+                        # reset the plots (clear)
                         self.run_tab.force_plot.reset()
                         self.run_tab.disp_plot.reset()
+
+                        #clear plot buffers
                         self.run_tab.time_q.clear()
                         self.run_tab.force_q.clear()
                         self.run_tab.disp_q.clear()
+                        self.run_tab.vel_q.clear()
                 
                 elif isinstance(packet, dict) and 'times' in packet:
-                    # This is a data packet
+                    # data packet
                     new_data_received = True
                     self.run_tab.time_q.extend(packet['times'])
                     self.run_tab.force_q.extend(packet['force'])
                     self.run_tab.disp_q.extend(packet['disp'])
+                    self.run_tab.vel_q.extend(packet['vel'])
+
 
                     if self.run_tab.temp_var and packet['temp'] is not None:
                         self.run_tab.temp_var.set(f"{packet['temp']:.1f} °C")
                 
             if new_data_received:
-                # Trim data buffers but keep enough history for the plot window
+                #trim data buffers but keep history for the plot window
                 if len(self.run_tab.time_q) > MAX_POINTS:
                     trim_amount = len(self.run_tab.time_q) - MAX_POINTS
                     
                     self.run_tab.time_q = self.run_tab.time_q[trim_amount:]
                     self.run_tab.force_q = self.run_tab.force_q[trim_amount:]
                     self.run_tab.disp_q = self.run_tab.disp_q[trim_amount:]
+                    self.run_tab.vel_q = self.run_tab.vel_q[trim_amount:]
                     
-                    #Adjust the plot's tracking index
+                    #update the plot's tracking index
                     self.run_tab.force_plot.last_idx = max(0, self.run_tab.force_plot.last_idx - trim_amount)
                     self.run_tab.disp_plot.last_idx = max(0, self.run_tab.disp_plot.last_idx - trim_amount)
                 
-                # Update plots with the trimmed data
+                # update plots with the trimmed data
                 self.run_tab.force_plot.update(
                     self.run_tab.time_q, 
                     [self.run_tab.force_q], 
@@ -113,7 +118,7 @@ class DamperDynoGUI(ThemedTk):
                 )
                 self.run_tab.disp_plot.update(
                     self.run_tab.time_q, 
-                    [self.run_tab.disp_q], 
+                    [self.run_tab.disp_q, self.run_tab.vel_q], 
                     sample_rate=sample_rate
                 )
         

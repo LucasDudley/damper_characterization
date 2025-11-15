@@ -20,6 +20,7 @@ class RunTestTab(ttk.Frame):
         self.time_q = []
         self.force_q = []
         self.disp_q = []
+        self.vel_q = []
 
         self._create_widgets()
 
@@ -32,8 +33,22 @@ class RunTestTab(ttk.Frame):
         right_plot_frame = ttk.Frame(plots_frame)
         right_plot_frame.pack(side="left", fill="both", expand=True, padx=(5, 0))
 
-        self.force_plot = RealTimePlot(master=left_plot_frame, signal_names=["Force"], y_label="Force [N]", y_range=(-1000, 1000))
-        self.disp_plot = RealTimePlot(master=right_plot_frame, signal_names=["Displacement"], y_label="Displacement [mm]", y_range=(0, 50))
+        self.force_plot = RealTimePlot(
+            master=left_plot_frame, 
+            signal_names=["Force"], 
+            y_label="Force [N]", 
+            y_range=(-1000, 1000)
+        )
+        self.disp_plot = RealTimePlot(
+            master=right_plot_frame,
+            signal_names=["Displacement"],
+            y_label="Displacement [mm]",
+            y_range=(0, 40),
+            secondary_signals=["Velocity"],
+            secondary_y_label="Velocity [mm/s]",
+            secondary_y_range=(-200, 200)
+        )
+
         
         readouts_frame = ttk.Frame(self)
         readouts_frame.pack(side="right", padx=10, pady=5, anchor="e")

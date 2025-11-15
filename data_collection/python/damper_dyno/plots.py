@@ -37,13 +37,16 @@ class RealTimePlot:
         
         if secondary_signals is not None:
             self.ax2 = self.ax.twinx()
-            self.secondary_lines = [self.ax2.plot([], [], label=name, linestyle='--')[0] 
-                                   for name in secondary_signals]
+            self.secondary_lines = [
+                self.ax2.plot([], [], label=name, color=self._get_secondary_color(i))[0]
+                for i, name in enumerate(secondary_signals)
+            ]
             if secondary_y_range is not None:
                 self.ax2.set_ylim(*secondary_y_range)
             if secondary_y_label is not None:
                 self.ax2.set_ylabel(secondary_y_label)
-        
+
+
         # Combine legends
         all_lines = self.lines + self.secondary_lines
         all_labels = [line.get_label() for line in all_lines]
@@ -55,6 +58,10 @@ class RealTimePlot:
         self.x_window = x_window
         self.plot_freq = plot_freq
         self.last_idx = 0
+
+    def _get_secondary_color(self, i):
+        primary_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
+        return primary_colors[(i + len(self.primary_signals)) % len(primary_colors)]
 
     def update(self, time_q, data_qs, sample_rate):
 
