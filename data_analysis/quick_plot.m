@@ -5,7 +5,7 @@ s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure ba
 
 % Inputs
 folder = "D:\AME441_Code\damper_characterization\Test_Data\Phase1_temp_sensitivity";
-file   = "dyno_test_2025-11-14_19-55-43";
+file   = "t2_3_3_24_24_s5_n100_100psi_with_heat_gun";
 filename = fullfile(folder, file);
 
 %read data
@@ -22,7 +22,7 @@ data.time = second(all_data.Timestamp); % get time
 Fs = 1 / abs(mean(diff(data.time(~isnan(data.time)))));
 
 %filter disp
-fc = 10; % disp cutoff frequency
+fc = 30; % disp cutoff frequency
 [b,a] = butter(2, fc/(Fs/2));
 data.raw_disp = disp - min(disp);
 data.disp = filtfilt(b, a, data.raw_disp); %normalize and filter
@@ -96,6 +96,4 @@ plot(xl, [0 0], 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility',
 
 %%
 figure
-plot(data.time, data.raw_disp);
-hold on
-plot(data.time, data.disp);
+plot(data.disp, data.velocity)
