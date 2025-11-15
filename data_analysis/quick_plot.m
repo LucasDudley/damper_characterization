@@ -5,7 +5,7 @@ s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure ba
 
 % Inputs
 folder = "D:\AME441_Code\damper_characterization\Test_Data\Phase1_temp_sensitivity";
-file   = "t2_3_3_24_24_s5_n100_100psi_with_heat_gun";
+file   = "t2_2_2_12_12_s5_n100_100psi_with_heat_gun";
 filename = fullfile(folder, file);
 
 %read data
@@ -22,7 +22,7 @@ data.time = second(all_data.Timestamp); % get time
 Fs = 1 / abs(mean(diff(data.time(~isnan(data.time)))));
 
 %filter disp
-fc = 30; % disp cutoff frequency
+fc = 12; % disp cutoff frequency
 [b,a] = butter(2, fc/(Fs/2));
 data.raw_disp = disp - min(disp);
 data.disp = filtfilt(b, a, data.raw_disp); %normalize and filter
@@ -51,11 +51,12 @@ V = data.velocity;
 F = data.force;
 T = data.temp;
 D = data.disp - (1.46/2);
+A = data.accel;
 
 % Remove NaNs
 valid = ~(isnan(V) | isnan(F) | isnan(T)) | isnan(D);
 
-%F-V
+%F-V-T
 figure();
 hold on;
 scatter(V(valid), F(valid), 10, T(valid), 'filled'); % color by temperature
@@ -74,12 +75,31 @@ xl = xlim;
 plot([0 0], yl, 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % x=0
 plot(xl, [0 0], 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % y=0
 
-% F-D
+%F-V-A
+figure();
+hold on;
+scatter(V(valid), F(valid), 10, A(valid), 'filled'); % color by temperature
+
+xlabel('\bfVelocity [in/s]', 'FontName', 'Times New Roman', 'FontSize', 14);
+ylabel('\bfForce [N]', 'FontName', 'Times New Roman', 'FontSize', 14);
+cb = colorbar;
+ylabel(cb, '\bfAccel [in/s^2]', 'FontName', 'Times New Roman', 'FontSize', 14);
+colormap turbo
+box off;
+grid off;
+
+% Add light dashed lines at x=0 and y=0
+yl = ylim;
+xl = xlim;
+plot([0 0], yl, 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % x=0
+plot(xl, [0 0], 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % y=0
+
+% F-D-T
 figure();
 hold on;
 scatter(D(valid), F(valid), 10, T(valid), 'filled'); % color by temperature
 
-xlabel('\bfDisplacement [in/s]', 'FontName', 'Times New Roman', 'FontSize', 14);
+xlabel('\bfDisplacement [in]', 'FontName', 'Times New Roman', 'FontSize', 14);
 ylabel('\bfForce [N]', 'FontName', 'Times New Roman', 'FontSize', 14);
 cb = colorbar;
 ylabel(cb, '\bfTemperature [°C]', 'FontName', 'Times New Roman', 'FontSize', 14);
@@ -93,7 +113,35 @@ xl = xlim;
 plot([0 0], yl, 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % x=0
 plot(xl, [0 0], 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % y=0
 
+% F-D-V
+figure();
+hold on;
+scatter(D(valid), F(valid), 10, V(valid), 'filled'); % color by temperature
 
-%%
-figure
-plot(data.disp, data.velocity)
+xlabel('\bfDisplacement [in/s]', 'FontName', 'Times New Roman', 'FontSize', 14);
+ylabel('\bfForce [N]', 'FontName', 'Times New Roman', 'FontSize', 14);
+cb = colorbar;
+ylabel(cb, '\bfVelocity [in/s]', 'FontName', 'Times New Roman', 'FontSize', 14);
+colormap turbo
+box off;
+grid off;
+
+% Add light dashed lines at x=0 and y=0
+yl = ylim;
+xl = xlim;
+plot([0 0], yl, 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % x=0
+plot(xl, [0 0], 'k--', 'LineWidth', 1, 'Color', [0 0 0 0.3], 'HandleVisibility','off'); % y=0
+
+% D-V-A
+figure();
+hold on;
+scatter(D(valid), V(valid), 10, A(valid), 'filled'); % color by temperature
+
+xlabel('\bfDisplacement [in]', 'FontName', 'Times New Roman', 'FontSize', 14);
+ylabel('\bfVelocity [in/s]', 'FontName', 'Times New Roman', 'FontSize', 14);
+cb = colorbar;
+ylabel(cb, '\bfAccel [in/s^2]', 'FontName', 'Times New Roman', 'FontSize', 14);
+colormap turbo
+box off;
+grid off;
+
