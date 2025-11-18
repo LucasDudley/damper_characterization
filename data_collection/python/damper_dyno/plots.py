@@ -137,7 +137,7 @@ class RealTimePlot:
 
 class RealTimeScatter:
     def __init__(self, master, x_label, y_label,
-                 x_range, y_range, figsize=(6, 4), marker='o', dot_size=10, color='k'):
+                 x_range, y_range, figsize=(6, 4), marker='o', dot_size=6, color='k'):
         
         self.fig, self.ax = plt.subplots(figsize=figsize)
         self.marker = marker

@@ -1,8 +1,8 @@
 {
     "daq_device_name": "Dev1",
-    "sample_rate": 300,
+    "sample_rate": 1000,
     "chunk_size": 50,
-    "lpf_cutoff": 10,
+    "lpf_cutoff": 30,
     "output_dir": "D:\\AME441_Code\\damper_characterization\\data_collection\\python\\damper_dyno\\results",
     "rpm_min": 0,
     "rpm_max": 1200,

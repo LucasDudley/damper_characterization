@@ -173,7 +173,7 @@ class AnalysisTab(ttk.Frame):
             y_label="Force [N]",
             x_range=(0, 40),
             y_range=(-1000, 1000),
-            color='orange'
+            color='blue'
         )
 
         # Force vs Velocity
