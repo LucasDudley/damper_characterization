@@ -164,9 +164,18 @@ class RealTimeScatter:
     def update(self, x_samples, y_samples):
         if len(x_samples) != len(y_samples):
             return
+
         self.x_data.extend(x_samples)
         self.y_data.extend(y_samples)
+
+        # Update scatter
         self.scatter.set_offsets(list(zip(self.x_data, self.y_data)))
+
+        # Update autorange
+        if self.x_data and self.y_data:
+            self.ax.set_xlim(get_lims(self.x_data))
+            self.ax.set_ylim(get_lims(self.y_data))
+
         self.canvas.draw_idle()
 
     def reset(self):
@@ -176,4 +185,14 @@ class RealTimeScatter:
         self.scatter.set_color(self.color)
         self.canvas.draw_idle()
 
+def get_lims(data):
+    if len(data) == 0:
+        return None
 
+    standoff = 1.1
+    d = np.array(data)
+
+    low  = np.percentile(d, 5)   # ignore low outliers
+    high = np.percentile(d, 95)  # ignore high outliers
+
+    return [standoff * low, standoff * high]
