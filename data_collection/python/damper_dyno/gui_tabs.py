@@ -185,7 +185,7 @@ class AnalysisTab(ttk.Frame):
             y_label="Force [N]",
             x_range=(-200, 200),
             y_range=(-1000, 1000),
-            color='orange'
+            color='blue'
         )
 
     def reset_plots(self):

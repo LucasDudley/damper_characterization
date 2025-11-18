@@ -85,7 +85,7 @@ class DamperDynoGUI(ThemedTk):
                         self.run_tab.vel_q.clear()
 
                         # Reset analysis tab with new color
-                        self.analysis_tab.new_run()
+                        self.analysis_tab.reset_plots()
                                     
                 elif isinstance(packet, dict) and 'times' in packet:
                     # data packet

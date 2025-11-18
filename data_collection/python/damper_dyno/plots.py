@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.dates as mdates
-import matplotlib.cm as cm
-import random
 import datetime
+import numpy as np
 
 class RealTimePlot:
     def __init__(self, master, signal_names, y_label="Values", y_range=(-100, 100),
@@ -138,7 +137,7 @@ class RealTimePlot:
 
 class RealTimeScatter:
     def __init__(self, master, x_label, y_label,
-                 x_range, y_range, figsize=(6, 4), marker='o', dot_size=10, color='orange'):
+                 x_range, y_range, figsize=(6, 4), marker='o', dot_size=10, color='k'):
         
         self.fig, self.ax = plt.subplots(figsize=figsize)
         self.marker = marker
@@ -173,7 +172,7 @@ class RealTimeScatter:
     def reset(self):
         self.x_data = []
         self.y_data = []
-        self.scatter.set_offsets([])
+        self.scatter.set_offsets(np.empty((0, 2)))
         self.scatter.set_color(self.color)
         self.canvas.draw_idle()
 
