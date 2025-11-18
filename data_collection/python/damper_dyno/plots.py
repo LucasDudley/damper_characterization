@@ -192,7 +192,7 @@ def get_lims(data):
     standoff = 1.1
     d = np.array(data)
 
-    low  = np.percentile(d, 5)   # ignore low outliers
-    high = np.percentile(d, 95)  # ignore high outliers
+    low  = np.percentile(d, 1)   # ignore low outliers
+    high = np.percentile(d, 99)  # ignore high outliers
 
     return [standoff * low, standoff * high]
