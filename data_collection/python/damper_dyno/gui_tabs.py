@@ -45,7 +45,7 @@ class RunTestTab(ttk.Frame):
             master=right_plot_frame,
             signal_names=["Displacement"],
             y_label="Displacement [mm]",
-            y_range=(0, 40),
+            y_range=(10, 50),
             secondary_signals=["Velocity"],
             secondary_y_label="Velocity [mm/s]",
             secondary_y_range=(-200, 200)
@@ -281,7 +281,7 @@ class AnalysisTab(ttk.Frame):
             master=force_disp_frame,
             x_label="Displacement [mm]",
             y_label="Force [N]",
-            x_range=(0, 40),
+            x_range=(0, 50),
             y_range=(-1000, 1000),
             color='blue'
         )

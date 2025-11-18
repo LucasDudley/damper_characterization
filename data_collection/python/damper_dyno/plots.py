@@ -189,10 +189,17 @@ def get_lims(data):
     if len(data) == 0:
         return None
 
-    standoff = 1.1
     d = np.array(data)
+    low  = np.percentile(d, 1)
+    high = np.percentile(d, 99)
 
-    low  = np.percentile(d, 1)   # ignore low outliers
-    high = np.percentile(d, 99)  # ignore high outliers
+    # span-based padding
+    span = high - low
+    if span == 0:
+        return [low - 1, high + 1]
 
-    return [standoff * low, standoff * high]
+    standoff = 0.1  # padding
+    pad = span * standoff
+
+    return [low - pad, high + pad]
+
