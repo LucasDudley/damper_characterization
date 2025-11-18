@@ -144,18 +144,17 @@ class RunTestTab(ttk.Frame):
         'run_profile_speeds_are_rpm' == True, the speeds are treated as RPM already.
         """
         try:
-            # Copy current GUI settings into a plain dict
+            # crerate dictionary of settings for profile run
             settings_for_run = {key: var.get() for key, var in self.settings_manager.setting_vars.items()}
 
-            # Convert numeric vars (preserve output_dir)
-            for key, value in settings_for_run.items():
+            for key, value in settings_for_run.items(): # convert numeric
                 if key != 'output_dir':
                     try:
                         settings_for_run[key] = float(value) if '.' in str(value) else int(value)
                     except Exception:
                         pass
 
-            # Get raw profile from loaded settings file (SettingsManager stores it in .settings)
+            # get the inital run profile from ettings namanger
             raw_profile = self.settings_manager.settings.get("run_profile", None)
             if not raw_profile:
                 messagebox.showerror("Missing Profile", "No run_profile found in config.json.")
@@ -169,7 +168,6 @@ class RunTestTab(ttk.Frame):
 
             # Convert speeds -> RPM if they are linear speeds (in/s)
             if not speeds_are_rpm:
-                # need crank and rod lengths from current settings (fall back to GUI values if present)
                 try:
                     crank_radius = float(settings_for_run.get('crank_radius_in', self.settings_manager.get_var('crank_radius_in').get()))
                     rod_length   = float(settings_for_run.get('rod_length_in', self.settings_manager.get_var('rod_length_in').get()))
