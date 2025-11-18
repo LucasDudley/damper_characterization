@@ -1,7 +1,7 @@
 {
     "daq_device_name": "Dev1",
-    "sample_rate": 1000,
-    "chunk_size": 50,
+    "sample_rate": 800,
+    "chunk_size": 200,
     "lpf_cutoff": 30,
     "output_dir": "D:\\AME441_Code\\damper_characterization\\data_collection\\python\\damper_dyno\\results",
     "rpm_min": 0,
@@ -14,11 +14,14 @@
     "disp_offset": -12.8,
     "temp_slope": 50,
     "temp_offset": -25,
-    "default_max_speed": 40,
     "default_num_cycles": 10,
     "crank_radius_in": 0.75,
     "rod_length_in": 6,
     "default_linear_speed_ips": 5,
+    "run_profile": [
+        [1,   2,   3,   4,  5],
+        [2,   2,   5,   5,  10]
+    ],
     "motor_max_torque_map": [
         [0,    320,   640,    960,   1280,   1600,   1920,   2240,   2560,   2880,   3200],
         [3.86, 3.86,  3.86,   3.86,  3.86,   3.86,   3.86,   3.86,   2.59,   1.26,   0]  

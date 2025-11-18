@@ -6,7 +6,7 @@ import numpy as np
 
 class RealTimePlot:
     def __init__(self, master, signal_names, y_label="Values", y_range=(-100, 100),
-                 figsize=(10,8), x_window=3, plot_freq=5, 
+                 figsize=(10,8), x_window=3, plot_freq=3, 
                  secondary_signals=None, secondary_y_label=None, secondary_y_range=None):
         """
         Parameters:

@@ -67,9 +67,18 @@ class RunTestTab(ttk.Frame):
         ttk.Label(control_frame, text="Cycles", font=self.fonts['widget_font']).pack(side=tk.LEFT, padx=(10, 0))
         ttk.Entry(control_frame, width=8, font=self.fonts['widget_font'], textvariable=self.settings_manager.get_var('default_num_cycles')).pack(side=tk.LEFT, padx=5)
 
-        ttk.Button(control_frame, text="Start", style="Big.TButton", command=self.start_test).pack(side=tk.LEFT, padx=10)
-        ttk.Button(control_frame, text="E-STOP", style="Big.TButton", command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
-        ttk.Button(control_frame, text="Quit", style="Big.TButton", command=self.on_quit).pack(side=tk.LEFT, padx=10)
+        ttk.Button(control_frame, text="Run Single", style="Big.TButton",
+           command=self.start_single_test).pack(side=tk.LEFT, padx=10)
+
+        ttk.Button(control_frame, text="Run Profile", style="Big.TButton",
+                command=self.start_profile_test).pack(side=tk.LEFT, padx=10)
+
+        ttk.Button(control_frame, text="E-STOP", style="Big.TButton",
+                command=self.emergency_stop).pack(side=tk.LEFT, padx=10)
+
+        ttk.Button(control_frame, text="Quit", style="Big.TButton",
+                command=self.on_quit).pack(side=tk.LEFT, padx=10)
+
 
     def start_test(self):
         try:
@@ -96,6 +105,109 @@ class RunTestTab(ttk.Frame):
             return
             
         threading.Thread(target=self.test_manager.run_test, args=(settings_for_run,), daemon=True).start()
+
+    def start_single_test(self):
+        """Run a single constant-speed test."""
+        try:
+            settings_for_run = {key: var.get() for key, var in self.settings_manager.setting_vars.items()}
+                            
+            target_linear_speed = float(settings_for_run['default_linear_speed_ips'])
+            crank_radius = float(settings_for_run['crank_radius_in'])
+            rod_length = float(settings_for_run['rod_length_in'])
+
+            theta_dot_rad_s, _, __ = required_theta_dot(V_des=target_linear_speed, Lc=rod_length, R=crank_radius)
+            calculated_rpm = theta_dot_rad_s * 60 / (2 * math.pi)
+            logging.info(f"[Single] Linear speed {target_linear_speed} in/s -> RPM {calculated_rpm:.2f}")
+
+            for key, value in settings_for_run.items():
+                if key != 'output_dir':
+                    try: settings_for_run[key] = float(value) if '.' in str(value) else int(value)
+                    except: pass
+
+            settings_for_run['run_speed_rpm'] = calculated_rpm
+            settings_for_run['run_num_cycles'] = int(self.settings_manager.get_var('default_num_cycles').get())
+            settings_for_run['run_profile'] = None  # force single mode
+
+        except Exception as e:
+            messagebox.showerror("Invalid Input", str(e))
+            return
+
+        threading.Thread(target=self.test_manager.run_test,
+                        args=(settings_for_run,), daemon=True).start()
+
+    def start_profile_test(self):
+        """Run a full profile defined in config.json.
+
+        Interprets the first row of run_profile as linear speed (in/s) by default,
+        and converts each speed to RPM using the same required_theta_dot logic
+        that start_single_test uses. If settings contains
+        'run_profile_speeds_are_rpm' == True, the speeds are treated as RPM already.
+        """
+        try:
+            # Copy current GUI settings into a plain dict
+            settings_for_run = {key: var.get() for key, var in self.settings_manager.setting_vars.items()}
+
+            # Convert numeric vars (preserve output_dir)
+            for key, value in settings_for_run.items():
+                if key != 'output_dir':
+                    try:
+                        settings_for_run[key] = float(value) if '.' in str(value) else int(value)
+                    except Exception:
+                        pass
+
+            # Get raw profile from loaded settings file (SettingsManager stores it in .settings)
+            raw_profile = self.settings_manager.settings.get("run_profile", None)
+            if not raw_profile:
+                messagebox.showerror("Missing Profile", "No run_profile found in config.json.")
+                return
+
+            # Optionally treat speeds as RPM directly
+            speeds_are_rpm = bool(self.settings_manager.settings.get("run_profile_speeds_are_rpm", False))
+
+            speeds_row = raw_profile[0]
+            durations_row = raw_profile[1]
+
+            # Convert speeds -> RPM if they are linear speeds (in/s)
+            if not speeds_are_rpm:
+                # need crank and rod lengths from current settings (fall back to GUI values if present)
+                try:
+                    crank_radius = float(settings_for_run.get('crank_radius_in', self.settings_manager.get_var('crank_radius_in').get()))
+                    rod_length   = float(settings_for_run.get('rod_length_in', self.settings_manager.get_var('rod_length_in').get()))
+                except Exception as e:
+                    messagebox.showerror("Missing Geometry", f"Crank or rod geometry missing or invalid: {e}")
+                    return
+
+                rpm_list = []
+                for v in speeds_row:
+                    # assume v is linear speed in in/s
+                    try:
+                        v_float = float(v)
+                    except Exception:
+                        messagebox.showerror("Invalid profile value", f"Invalid speed value in profile: {v}")
+                        return
+
+                    theta_dot_rad_s, _, _ = required_theta_dot(V_des=v_float, Lc=rod_length, R=crank_radius)
+                    rpm = theta_dot_rad_s * 60.0 / (2.0 * math.pi)
+                    rpm_list.append(rpm)
+            else:
+                # speeds are already RPM
+                rpm_list = [float(s) for s in speeds_row]
+
+            # build the converted profile in the same 2xN row-wise format
+            converted_profile = [rpm_list, durations_row]
+
+            # attach to settings_for_run and start
+            settings_for_run['run_profile'] = converted_profile
+
+            logging.info("Starting profile test (converted speeds to RPM)...")
+            threading.Thread(target=self.test_manager.run_test,
+                            args=(settings_for_run,), daemon=True).start()
+
+        except Exception as e:
+            messagebox.showerror("Profile Start Error", f"Failed to start profile test: {e}")
+            logging.exception("Failed to start profile test")
+            return
+
 
     def emergency_stop(self):
         logging.info("⚠ EMERGENCY STOP PRESSED ⚠")

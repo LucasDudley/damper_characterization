@@ -14,75 +14,137 @@ from utils import (
 
 class TestManager:
     def __init__(self, daq_controller):
-        """
-        Initialize the TestManager.
-        """
         self.daq = daq_controller
         self.gui_queue = queue.Queue()
-        
+
         self.force_plot = None
         self.disp_plot = None
         self.temp_var = None
 
-        self.channels = ["ai0", "ai1", "ai2"] # Load cell / Linpot / IR temp
+        self.channels = ["ai0", "ai1", "ai2"]
         self.mode = ['DIFF', 'DIFF', 'DIFF']
 
     def run_test(self, settings):
-        """
-        Runs a complete test cycle based on the provided settings dictionary.
-        """
-        # Extract run parameters from the settings dictionary
+
+        # Either a single-speed test OR a multi-step run profile
+        run_profile = settings.get("run_profile", None)
+
+        if run_profile is not None:
+            self._run_profile_test(settings, run_profile)
+        else:
+            self._run_single_speed_test(settings)
+
+    # OPTION A: SINGLE-SPEED TEST
+    def _run_single_speed_test(self, settings):
         target_speed = settings['run_speed_rpm']
         num_cycles = gearbox_scaling(10, settings['run_num_cycles'])
-        
-        logging.info(f"Starting test with speed: {target_speed} RPM (M), Cycles: {num_cycles} (M)" )
-        
+
+        logging.info(f"Starting SINGLE test: speed={target_speed} RPM, cycles={num_cycles}")
+
         self.gui_queue.put({'command': 'reset_plots'})
 
-        # Configure and start the motor
-        pwm = convert_speed_to_duty_cycle(target_speed, 
+        pwm = convert_speed_to_duty_cycle(
+            target_speed,
             [settings["rpm_min"], settings["rpm_max"]],
-            [settings["duty_cycle_min"], settings["duty_cycle_max"]])
+            [settings["duty_cycle_min"], settings["duty_cycle_max"]]
+        )
+
         self.daq.configure_motor_pwm()
         self.daq.start_motor(pwm)
 
-        # Setup for data logging
-        headers = ["Timestamp",
-                   "Force (V)", "Force (N)", 
-                   "Displacement (V)", "Displacement (mm)", 
-                   "Temperature (V)", "Temperature (C)",
-                   "Velocity (mm/s)"]
-        data_storage = [headers]
+        self._start_acquisition(settings)
 
-        # Low-pass filter for displacement → velocity pipeline
+        duration = num_cycles / target_speed * 60.0
+
+        def thread_fcn():
+            threading.Event().wait(duration)
+            self._end_test(settings)
+
+        threading.Thread(target=thread_fcn, daemon=True).start()
+
+    # OPTION B: RUN PROFILE
+    def _run_profile_test(self, settings, run_profile):
+
+        speeds = run_profile[0]  # RPM values
+        cycles = run_profile[1]  # CYCLE COUNTS
+
+        assert len(speeds) == len(cycles), "run_profile rows must be equal length"
+
+        self.gui_queue.put({'command': 'reset_plots'})
+
+        logging.info(f"Starting PROFILE test with {len(speeds)} segments.")
+
+        # Start DAQ once
+        self._start_acquisition(settings)
+
+        self.daq.configure_motor_pwm()
+
+        def profile_thread():
+            for i, (rpm, cycle_count) in enumerate(zip(speeds, cycles)):
+                # Calculate duration from cycles and RPM
+                if rpm <= 0:
+                    logging.warning(f"[Segment {i+1}] RPM={rpm} is invalid, skipping.")
+                    continue
+                
+                # Apply gearbox scaling to cycles
+                scaled_cycles = gearbox_scaling(10, cycle_count)
+                duration = (scaled_cycles / rpm) * 60.0
+                
+                logging.info(f"[Segment {i+1}/{len(speeds)}] RPM={rpm:.2f}, Cycles={cycle_count}, Duration={duration:.2f}s")
+
+                pwm = convert_speed_to_duty_cycle(
+                    rpm,
+                    [settings["rpm_min"], settings["rpm_max"]],
+                    [settings["duty_cycle_min"], settings["duty_cycle_max"]]
+                )
+
+                if i == 0:
+                    self.daq.start_motor(pwm)
+                else:
+                    self.daq.update_motor_duty_cycle(pwm)
+
+                threading.Event().wait(duration)
+
+            # End of all segments -> stop system
+            self._end_test(settings)
+
+        threading.Thread(target=profile_thread, daemon=True).start()
+
+    def _start_acquisition(self, settings):
+
         fs = settings['sample_rate']
-        fc = settings['lpf_cutoff']  # Hz
-        b, a = butter(2, fc / (fs / 2), btype='low') # Butterworth 2nd-order LPF
-        lpf_state = np.zeros(max(len(a), len(b)) - 1) # Filter state (persist across callback chunks)
-
-        # prev filtered displacement sample for velocity numerical derivative
+        fc = settings['lpf_cutoff']
+        b, a = butter(2, fc / (fs / 2), btype='low')
+        lpf_state = np.zeros(max(len(a), len(b)) - 1)
         prev_disp = None
 
-        # This callback fcn runs in the DAQ's background thread
-        def daq_callback(times, raw_values):
-            n = min(len(times), raw_values.shape[1])
-            times_chunk = times[:n]
-            raw_values_chunk = raw_values[:, :n]
-            force_v = raw_values_chunk[0]
-            disp_v = raw_values_chunk[1]
-            temp_v = raw_values_chunk[2]
+        data_storage = [[
+            "Timestamp",
+            "Force (V)", "Force (N)",
+            "Displacement (V)", "Displacement (mm)",
+            "Temperature (V)", "Temperature (C)",
+            "Velocity (mm/s)"
+        ]]
 
-            # scale values using mapping functions
+        def daq_callback(times, raw_values):
+            nonlocal lpf_state, prev_disp
+
+            n = min(len(times), raw_values.shape[1])
+            t = times[:n]
+            vals = raw_values[:, :n]
+
+            force_v = vals[0]
+            disp_v = vals[1]
+            temp_v = vals[2]
+
             force_val = map_voltage_to_force(force_v, settings['force_slope'], settings['force_offset'])
             disp_val = map_voltage_to_displacement(disp_v, settings['disp_slope'], settings['disp_offset'])
             temp_val = map_voltage_to_temperature(temp_v, settings['temp_slope'], settings['temp_offset'])
 
-            # low-pass filter
-            nonlocal lpf_state, prev_disp
-
+            # Filtered displacement
             disp_filt, lpf_state = lfilter(b, a, disp_val, zi=lpf_state)
 
-            # build previous-sample vector for numerical derivative
+            # Derivative velocity
             if prev_disp is None:
                 x_prev = np.concatenate(([disp_filt[0]], disp_filt[:-1]))
             else:
@@ -91,29 +153,26 @@ class TestManager:
             vel = (disp_filt - x_prev) * fs
             prev_disp = disp_filt[-1]
 
-            
-            # Log the data
+            # Log rows
             for i in range(n):
-                row = [
-                        times_chunk[i],
-                        force_v[i], force_val[i],
-                        disp_v[i], disp_val[i],
-                        temp_v[i], temp_val[i],
-                        vel[i] 
-                    ]
-                data_storage.append(row)
-            
-            # Put data onto the queue for the GUI thread
-            gui_data_packet = {
-                'times': times_chunk,
-                'force': force_val.tolist(),
-                'disp': disp_val.tolist(),
-                'vel': vel.tolist(),
-                'temp': temp_val[-1] if len(temp_val) > 0 else None
-            }
-            self.gui_queue.put(gui_data_packet)
+                data_storage.append([
+                    t[i],
+                    force_v[i], force_val[i],
+                    disp_v[i], disp_val[i],
+                    temp_v[i], temp_val[i],
+                    vel[i]
+                ])
 
-        # Start DAQ acquisition
+            # GUI update packet
+            self.gui_queue.put({
+                "times": t,
+                "force": force_val.tolist(),
+                "disp": disp_val.tolist(),
+                "vel": vel.tolist(),
+                "temp": temp_val[-1]
+            })
+
+        self.data_storage = data_storage
         self.daq.start_acquisition(
             self.channels,
             self.mode,
@@ -122,18 +181,8 @@ class TestManager:
             callback=daq_callback
         )
 
-        # thread to control test duration
-        def test_thread():
-            test_duration = num_cycles / target_speed * 60.0
-            threading.Event().wait(test_duration)
-
-            if self.daq.ai_task is not None:
-                logging.info("Test duration finished. Stopping motor and acquisition.")
-                self.daq.stop_motor()
-                self.daq.stop_acquisition()
-                
-                # Make sure the save fcn can handle the settings dictionary
-                save_test_data(data_storage, settings) 
-
-        # Run the duration controller in the background
-        threading.Thread(target=test_thread, daemon=True).start()
+    def _end_test(self, settings):
+        logging.info("Test finished -> stopping motor and acquisition.")
+        self.daq.stop_motor()
+        self.daq.stop_acquisition()
+        save_test_data(self.data_storage, settings)

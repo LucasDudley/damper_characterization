@@ -1,42 +1,29 @@
-2025-11-17 19:12:36,240 [INFO] Application starting
-2025-11-17 19:12:36,241 [INFO] Successfully loaded settings from 'config.json'
-2025-11-17 19:12:36,241 [INFO] Attempting to connect to DAQ device: 'Dev1'
-2025-11-17 19:12:36,241 [INFO] Hardware initialized successfully.
-2025-11-17 19:12:56,117 [INFO] Target linear speed: 1.0 in/s => Calculated RPM: 126.34
-2025-11-17 19:12:56,118 [INFO] Starting test with speed: 126.34051296155684 RPM (M), Cycles: 100 (M)
-2025-11-17 19:12:56,184 [INFO] GUI: Received reset_plots command.
-2025-11-17 19:12:56,302 [INFO] Setting initial PWM property to Duty Cycle: 0.10528376080129735
-2025-11-17 19:12:56,373 [INFO] DAQ acquisition started successfully.
-2025-11-17 19:13:44,028 [INFO] Test duration finished. Stopping motor and acquisition.
-2025-11-17 19:13:44,030 [INFO] Motor Ramp Down
-2025-11-17 19:13:44,031 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.0001
-2025-11-17 19:13:44,035 [INFO] Successfully wrote new CtrFreq sample to PWM task.
-2025-11-17 19:13:45,430 [INFO] DAQ acquisition stopped.
-2025-11-17 19:13:45,432 [INFO] Saving test data to: D:\AME441_Code\damper_characterization\data_collection\python\damper_dyno\results\dyno_test_2025-11-17_19-13-45.csv
-2025-11-17 19:13:45,486 [INFO] Error in DAQ callback: Task specified is invalid or does not exist.
-Status Code: -200088
-2025-11-17 19:13:46,697 [INFO] Data saved successfully.
-2025-11-17 19:14:00,749 [INFO] Target linear speed: 5.0 in/s => Calculated RPM: 631.70
-2025-11-17 19:14:00,750 [INFO] Starting test with speed: 631.7025648077841 RPM (M), Cycles: 300 (M)
-2025-11-17 19:14:00,754 [INFO] Setting initial PWM property to Duty Cycle: 0.5264188040064868
-2025-11-17 19:14:00,805 [INFO] GUI: Received reset_plots command.
-2025-11-17 19:14:00,819 [INFO] DAQ acquisition started successfully.
-2025-11-17 19:14:29,411 [INFO] Test duration finished. Stopping motor and acquisition.
-2025-11-17 19:14:29,413 [INFO] Motor Ramp Down
-2025-11-17 19:14:29,414 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.0001
-2025-11-17 19:14:29,417 [INFO] Successfully wrote new CtrFreq sample to PWM task.
-2025-11-17 19:14:30,502 [INFO] DAQ acquisition stopped.
-2025-11-17 19:14:30,503 [INFO] Saving test data to: D:\AME441_Code\damper_characterization\data_collection\python\damper_dyno\results\dyno_test_2025-11-17_19-14-30.csv
-2025-11-17 19:14:30,838 [INFO] Data saved successfully.
-2025-11-17 19:15:26,403 [INFO] Target linear speed: 5.0 in/s => Calculated RPM: 631.70
-2025-11-17 19:15:26,404 [INFO] Starting test with speed: 631.7025648077841 RPM (M), Cycles: 300 (M)
-2025-11-17 19:15:26,408 [INFO] Setting initial PWM property to Duty Cycle: 0.5264188040064868
-2025-11-17 19:15:26,467 [INFO] GUI: Received reset_plots command.
-2025-11-17 19:15:26,480 [INFO] DAQ acquisition started successfully.
-2025-11-17 19:15:54,977 [INFO] Test duration finished. Stopping motor and acquisition.
-2025-11-17 19:15:54,977 [INFO] Motor Ramp Down
-2025-11-17 19:15:54,977 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.0001
-2025-11-17 19:15:54,979 [INFO] Successfully wrote new CtrFreq sample to PWM task.
-2025-11-17 19:15:56,103 [INFO] DAQ acquisition stopped.
-2025-11-17 19:15:56,103 [INFO] Saving test data to: D:\AME441_Code\damper_characterization\data_collection\python\damper_dyno\results\dyno_test_2025-11-17_19-15-56.csv
-2025-11-17 19:15:56,749 [INFO] Data saved successfully.
+2025-11-17 20:19:16,732 [INFO] Application starting
+2025-11-17 20:19:16,732 [INFO] Successfully loaded settings from 'config.json'
+2025-11-17 20:19:16,732 [INFO] Attempting to connect to DAQ device: 'Dev1'
+2025-11-17 20:19:16,732 [INFO] Hardware initialized successfully.
+2025-11-17 20:19:19,613 [INFO] Starting profile test (converted speeds to RPM)...
+2025-11-17 20:19:19,614 [INFO] Starting PROFILE test with 5 segments.
+2025-11-17 20:19:19,637 [INFO] GUI: Received reset_plots command.
+2025-11-17 20:19:19,837 [INFO] DAQ acquisition started successfully.
+2025-11-17 20:19:19,841 [INFO] [Segment 1/5] RPM=126.34, Cycles=2 (scaled=20.0), Duration=9.50s
+2025-11-17 20:19:19,853 [INFO] Setting initial PWM property to Duty Cycle: 0.105
+2025-11-17 20:19:29,403 [INFO] [Segment 2/5] RPM=252.68, Cycles=2 (scaled=20.0), Duration=4.75s
+2025-11-17 20:19:29,406 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.2105675216025947
+2025-11-17 20:19:29,409 [INFO] Successfully wrote new CtrFreq sample to PWM task.
+2025-11-17 20:19:34,206 [INFO] [Segment 3/5] RPM=379.02, Cycles=5 (scaled=50.0), Duration=7.92s
+2025-11-17 20:19:34,209 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.3158512824038921
+2025-11-17 20:19:34,212 [INFO] Successfully wrote new CtrFreq sample to PWM task.
+2025-11-17 20:19:42,177 [INFO] [Segment 4/5] RPM=505.36, Cycles=5 (scaled=50.0), Duration=5.94s
+2025-11-17 20:19:42,181 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.4211350432051894
+2025-11-17 20:19:42,190 [INFO] Successfully wrote new CtrFreq sample to PWM task.
+2025-11-17 20:19:48,131 [INFO] [Segment 5/5] RPM=631.70, Cycles=10 (scaled=100.0), Duration=9.50s
+2025-11-17 20:19:48,132 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.5264188040064868
+2025-11-17 20:19:48,134 [INFO] Successfully wrote new CtrFreq sample to PWM task.
+2025-11-17 20:19:57,677 [INFO] Test finished -> stopping motor and acquisition.
+2025-11-17 20:19:57,682 [INFO] Motor Ramp Down
+2025-11-17 20:19:57,682 [INFO] Writing to running task >> Freq: 1000 Hz, Duty Cycle: 0.0001
+2025-11-17 20:19:57,695 [INFO] Successfully wrote new CtrFreq sample to PWM task.
+2025-11-17 20:19:59,184 [INFO] DAQ acquisition stopped.
+2025-11-17 20:19:59,254 [INFO] Saving test data to: D:\AME441_Code\damper_characterization\data_collection\python\damper_dyno\results\dyno_test_2025-11-17_20-19-59.csv
+2025-11-17 20:19:59,711 [INFO] Data saved successfully.

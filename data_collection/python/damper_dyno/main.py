@@ -32,7 +32,7 @@ def main():
     setup_logging()
     logging.info("Application starting")
     
-    # Check for NI-DAQmx drivers on device
+    # Check for NI-DAQmx drivers
     if not NIDAQMX_AVAILABLE:
         root = tk.Tk()
         root.withdraw()
@@ -43,7 +43,7 @@ def main():
     # Initialize settings manager with config.json
     settings_manager = SettingsManager("config.json")
     
-    # Get the DAQ device name from the loaded settings
+    # Get DAQ device name from settings
     daq_device_name = settings_manager.settings.get("daq_device_name", "Dev1")
 
     # Initialize Hardware
@@ -70,7 +70,7 @@ def main():
     
     # Initialize Core Components and Run GUI
     logging.info("Hardware initialized successfully.")
-    test_manager = TestManager(daq) # feed daq object into test mangager object
+    test_manager = TestManager(daq)
 
     app = DamperDynoGUI(test_manager, settings_manager)
     
