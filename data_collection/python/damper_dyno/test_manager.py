@@ -23,7 +23,9 @@ class TestManager:
 
         self.channels = ["ai0", "ai1", "ai2"]
         self.mode = ['DIFF', 'DIFF', 'DIFF']
-
+        
+        self.current_target_rpm = 0 
+        
     def run_test(self, settings):
 
         # Either a single-speed test OR a multi-step run profile
@@ -42,6 +44,9 @@ class TestManager:
         logging.info(f"Starting SINGLE test: speed={target_speed} RPM, cycles={num_cycles}")
 
         self.gui_queue.put({'command': 'reset_plots'})
+        
+        # SET the target RPM before starting acquisition
+        self.current_target_rpm = target_speed
 
         pwm = convert_speed_to_duty_cycle(
             target_speed,
@@ -64,7 +69,6 @@ class TestManager:
 
     # OPTION B: RUN PROFILE
     def _run_profile_test(self, settings, run_profile):
-
         speeds = run_profile[0]  # RPM values
         cycles = run_profile[1]  # CYCLE COUNTS
 
@@ -73,6 +77,9 @@ class TestManager:
         self.gui_queue.put({'command': 'reset_plots'})
 
         logging.info(f"Starting PROFILE test with {len(speeds)} segments.")
+
+        # Initialize with first segment's RPM
+        self.current_target_rpm = speeds[0]
 
         # Start DAQ once
         self._start_acquisition(settings)
@@ -86,6 +93,9 @@ class TestManager:
                     logging.warning(f"[Segment {i+1}] RPM={rpm} is invalid, skipping.")
                     continue
                 
+                # current target RPM for this segment
+                self.current_target_rpm = rpm
+
                 # Apply gearbox scaling to cycles
                 scaled_cycles = gearbox_scaling(10, cycle_count)
                 duration = (scaled_cycles / rpm) * 60.0
@@ -111,7 +121,6 @@ class TestManager:
         threading.Thread(target=profile_thread, daemon=True).start()
 
     def _start_acquisition(self, settings):
-
         fs = settings['sample_rate']
         fc = settings['lpf_cutoff']
         b, a = butter(2, fc / (fs / 2), btype='low')
@@ -119,6 +128,7 @@ class TestManager:
         prev_disp = None
 
         data_storage = [[
+            "RPM",
             "Timestamp",
             "Force (V)", "Force (N)",
             "Displacement (V)", "Displacement (mm)",
@@ -153,9 +163,13 @@ class TestManager:
             vel = (disp_filt - x_prev) * fs
             prev_disp = disp_filt[-1]
 
+            # Get current target RPM from instance variable
+            current_rpm = self.current_target_rpm  # ADD THIS LINE
+
             # Log rows
             for i in range(n):
                 data_storage.append([
+                    current_rpm,  # ADD THIS as first value
                     t[i],
                     force_v[i], force_val[i],
                     disp_v[i], disp_val[i],
