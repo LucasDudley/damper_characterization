@@ -169,12 +169,15 @@ class TestManager:
             # Log rows
             for i in range(n):
                 data_storage.append([
-                    current_rpm,  # ADD THIS as first value
-                    t[i],
-                    force_v[i], force_val[i],
-                    disp_v[i], disp_val[i],
-                    temp_v[i], temp_val[i],
-                    vel[i]
+                    f"{current_rpm:.2f}",           # target motor speed
+                    t[i],                           # timestamp
+                    f"{force_v[i]:.4f}",            # load cell voltage
+                    f"{force_val[i]:.4f}",          # force (N)
+                    f"{disp_v[i]:.4f}",             # linpot voltage
+                    f"{disp_val[i]:.4f}",           # displacement (mm)
+                    f"{temp_v[i]:.4f}",             # IR temp voltage
+                    f"{temp_val[i]:.4f}",           # temperature (C)
+                    f"{vel[i]:.4f}"                 # velocity (mm/s)
                 ])
 
             # GUI update packet
