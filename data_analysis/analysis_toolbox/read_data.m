@@ -7,14 +7,18 @@ folder_path = "D:\AME441_Code\damper_characterization\Test_Data\Phase3_all_sweep
 out_path = "G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles";
 out_name = "valving_test_data.mat";
 
-fc = 15;  % cutoff freq [Hz]
+fc = 12;  % cutoff freq [Hz]
 fc_temp = 1;
+
+trim_start = 0.4;  
+trim_end   = 0.05;
 
 %% data handling
 
 % Get list of all CSV files
 files = dir(fullfile(folder_path, '*.csv'));
 test_data = struct();
+run_guide = [];
 
 for i = 1:length(files)
     fname = files(i).name; % grab current filename
@@ -31,6 +35,13 @@ for i = 1:length(files)
     test_data.(runField).valving.hsr = str2double(tokens{3});
     test_data.(runField).valving.lsc = str2double(tokens{4});
     test_data.(runField).valving.lsr = str2double(tokens{5});
+
+    %update run guide
+    run_guide = [run_guide; runNum,...
+                str2double(tokens{2}),...
+                str2double(tokens{3}),...
+                str2double(tokens{4}),...
+                str2double(tokens{5})];
 
     % read current data
     curr_data = readtable(fullfile(folder_path, fname), ...
@@ -63,7 +74,6 @@ for i = 1:length(files)
     
     % Split by RPM groups
     unique_rpms = unique(curr_data.RPM);
-    
     for r = 1:length(unique_rpms)
         rpm_raw = unique_rpms(r);
     
@@ -77,16 +87,33 @@ for i = 1:length(files)
         hzFieldRaw = sprintf("f%.3f", curr_HZ);
         hzField = matlab.lang.makeValidName(hzFieldRaw);
     
+        % Extract segment times
+        t_seg = dt(mask);
+        
+        % Normalize time relative to segment start
+        t_seg = t_seg - t_seg(1);
+        
+        % Apply trimming relative to segment
+        keep = (t_seg >= trim_start) & (t_seg <= (t_seg(end) - trim_end));
+        
+        % Apply trimming to all signals
+        t_seg      = t_seg(keep);
+        disp_seg   = filt_disp(mask);    disp_seg   = disp_seg(keep);
+        vel_seg    = vel(mask);          vel_seg    = vel_seg(keep);
+        acc_seg    = acc(mask);          acc_seg    = acc_seg(keep);
+        force_seg  = force(mask);        force_seg  = force_seg(keep);
+        temp_seg   = temp_f(mask);       temp_seg   = temp_seg(keep);
+        
         % Store directly under runField
         test_data.(runField).(hzField).RPM      = curr_RPM;
-        test_data.(runField).(hzField).time     = dt(mask);
-        test_data.(runField).(hzField).disp     = filt_disp(mask);
-        test_data.(runField).(hzField).velocity = vel(mask);
-        test_data.(runField).(hzField).accel    = acc(mask);
-        test_data.(runField).(hzField).force    = force(mask);
-        test_data.(runField).(hzField).temp     = temp_f(mask);
+        test_data.(runField).(hzField).time     = t_seg;
+        test_data.(runField).(hzField).disp     = disp_seg;
+        test_data.(runField).(hzField).velocity = vel_seg;
+        test_data.(runField).(hzField).accel    = acc_seg;
+        test_data.(runField).(hzField).force    = force_seg;
+        test_data.(runField).(hzField).temp     = temp_seg;
     end
 end
-
+test_data.run_guide = run_guide; % add to struct
 %% store data in matfile
 save(fullfile(out_path, out_name), "test_data");
