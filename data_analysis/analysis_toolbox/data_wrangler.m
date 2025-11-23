@@ -1,13 +1,10 @@
 clear, clc, close all
-
-% load test data
-load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_test_data.mat")
-
-%ouput
+% Paths
 out_path = "G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles";
 out_name = "valving_results_data.mat";
+load_path = "G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_test_data.mat";
 
-% Configurable bin counts
+% Binning settings
 Nbins_FD = 300;
 Nbins_FV = 200;
 Nbins_FV_all = 100;
@@ -15,17 +12,38 @@ max_vel_bin_width = 0.25;
 
 % Polynomial fit settings
 poly_order = 3;
+opp_vel_perc = 0.15; % percent of comp/rebound to consider in fit
 
-%% processing
-run_fields = fieldnames(test_data);
-% Only keep "rX" (avoid run_guide)
+% Piecewise Linear Fit Settings 
+v_knee_fixed = 0.75;
+
+load(load_path, "test_data");
+run_fields = fieldnames(test_data); % Only keep "rX" (avoid run_guide)
 run_fields = run_fields( ~cellfun(@isempty, regexp(run_fields, "^r\d+$")) );
 results = struct();
 
 for ri = 1:numel(run_fields)
     rf = run_fields{ri};
-    results.(rf).valving = test_data.(rf).valving;
-    freq_fields = fieldnames(test_data.(rf));
+    
+    % Call the main processing function
+    run_results = process_run_data(test_data.(rf), ...
+                                   Nbins_FD, Nbins_FV, Nbins_FV_all, ...
+                                   max_vel_bin_width, poly_order, opp_vel_perc, ...
+                                   v_knee_fixed); % Removed v_fit_max from args
+    
+    results.(rf) = run_results;
+end
+
+% --- Save Results ---
+save(fullfile(out_path, out_name), "results");
+
+%% Helper Functions
+
+function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, max_vel_bin_width, poly_order, opp_vel_perc, v_knee_fixed)
+% PROCESS_RUN_DATA Processes data for a single test run (e.g., 'r1').
+
+    results.valving = run_data.valving;
+    freq_fields = fieldnames(run_data);
     freq_fields = freq_fields(~strcmp(freq_fields,"valving"));
     
     % Initialize arrays for combined frequency data
@@ -34,192 +52,239 @@ for ri = 1:numel(run_fields)
     v_all_reb = [];
     f_all_reb = [];
     
+    % Step 1: Process each frequency test
     for fi = 1:numel(freq_fields)
         ff = freq_fields{fi};
-        d = test_data.(rf).(ff);
+        d = run_data.(ff);
         v = d.velocity(:);
         x = d.disp(:);
         f = d.force(:);
         a = d.accel(:);
         
-        % split the data by accel & deccel
+        % Data masks
         accel_mask = a > 0;
         decel_mask = a < 0;
-        fd_pos_mask = v > 0;   % positive velocity → "compression"
-        fd_neg_mask = v < 0;   % negative velocity → "rebound"
+        fd_pos_mask = v > 0;
+        fd_neg_mask = v < 0;
         
-        % FD (velocity sign) - uses Nbins_FD
-        [x_bins, fd_mean_pos, fd_unc_pos] = bin_profile(x(fd_pos_mask), f(fd_pos_mask), Nbins_FD);
-        [~,      fd_mean_neg, fd_unc_neg] = bin_profile(x(fd_neg_mask), f(fd_neg_mask), Nbins_FD);
+        % --- FD (Force-Displacement) Plot Binning (uses Nbins_FD) ---
+        [x_bins, fd_mean_pos, fd_unc_pos] = bin_profile_modified(x(fd_pos_mask), f(fd_pos_mask), Nbins_FD, 'uniform_x');
+        [~,      fd_mean_neg, fd_unc_neg] = bin_profile_modified(x(fd_neg_mask), f(fd_neg_mask), Nbins_FD, 'uniform_x');
+        results.(ff).FD.pos.disp = x_bins; results.(ff).FD.pos.mean = fd_mean_pos; results.(ff).FD.pos.unc  = fd_unc_pos;
+        results.(ff).FD.neg.disp = x_bins; results.(ff).FD.neg.mean = fd_mean_neg; results.(ff).FD.neg.unc  = fd_unc_neg;
         
-        results.(rf).(ff).FD.pos.disp = x_bins;
-        results.(rf).(ff).FD.pos.mean = fd_mean_pos;
-        results.(rf).(ff).FD.pos.unc  = fd_unc_pos;
+        % --- FV (Force-Velocity) Plot Binning (Split by Accel Sign, uses Nbins_FV) ---
+        [v_bins, fv_mean_acc, fv_unc_acc] = bin_profile_modified(v(accel_mask), f(accel_mask), Nbins_FV, 'uniform_x');
+        [~,      fv_mean_dec, fv_unc_dec] = bin_profile_modified(v(decel_mask), f(decel_mask), Nbins_FV, 'uniform_x');
+        results.(ff).FV.pos.velocity = v_bins; results.(ff).FV.pos.mean = fv_mean_acc; results.(ff).FV.pos.unc = fv_unc_acc;
+        results.(ff).FV.neg.velocity = v_bins; results.(ff).FV.neg.mean = fv_mean_dec; results.(ff).FV.neg.unc = fv_unc_dec;
         
-        results.(rf).(ff).FD.neg.disp = x_bins;
-        results.(rf).(ff).FD.neg.mean = fd_mean_neg;
-        results.(rf).(ff).FD.neg.unc  = fd_unc_neg;
+        % --- FV_all Plot Binning (uses Nbins_FV_all) ---
+        [v_bins2, fv_mean_all, fv_unc_all] = bin_profile_modified(v, f, Nbins_FV_all, 'uniform_x');
+        results.(ff).FV_all.velocity = v_bins2; results.(ff).FV_all.mean = fv_mean_all; results.(ff).FV_all.unc = fv_unc_all;
         
-        % FV (split by accel sign) - uses Nbins_FV
-        [v_bins, fv_mean_acc, fv_unc_acc] = bin_profile(v(accel_mask), f(accel_mask), Nbins_FV);
-        [~,      fv_mean_dec, fv_unc_dec] = bin_profile(v(decel_mask), f(decel_mask), Nbins_FV);
+        % --- Polynomial Fits (Per Frequency) ---
+        v_comp = v(v > 0); f_comp = f(v > 0);
+        v_all_comp = [v_all_comp; v_comp]; f_all_comp = [f_all_comp; f_comp];
+        [results.(ff).FV_fit.pos] = polyfit_data(v_comp, f_comp, poly_order);
         
-        results.(rf).(ff).FV.pos.velocity = v_bins;
-        results.(rf).(ff).FV.pos.mean     = fv_mean_acc;
-        results.(rf).(ff).FV.pos.unc      = fv_unc_acc;
+        v_reb = v(v < 0); f_reb = f(v < 0);
+        v_all_reb = [v_all_reb; v_reb]; f_all_reb = [f_all_reb; f_reb];
+        [results.(ff).FV_fit.neg] = polyfit_data(v_reb, f_reb, poly_order);
         
-        results.(rf).(ff).FV.neg.velocity = v_bins;
-        results.(rf).(ff).FV.neg.mean     = fv_mean_dec;
-        results.(rf).(ff).FV.neg.unc      = fv_unc_dec;
-        
-        % FV_all - uses Nbins_FV_all
-        [v_bins2, fv_mean_all, fv_unc_all] = bin_profile(v, f, Nbins_FV_all);
-        
-        results.(rf).(ff).FV_all.velocity = v_bins2;
-        results.(rf).(ff).FV_all.mean     = fv_mean_all;
-        results.(rf).(ff).FV_all.unc      = fv_unc_all;
-        
-        % polynomial fits
-        % Compression (positive velocity)
-        v_comp = v(v > 0);
-        f_comp = f(v > 0);
-        
-        % Accumulate data for combined fit
-        v_all_comp = [v_all_comp; v_comp];
-        f_all_comp = [f_all_comp; f_comp];
-        
-        if numel(v_comp) > poly_order + 1
-            p_comp = polyfit(v_comp, f_comp, poly_order);
-            
-            % Calculate R-squared
-            f_comp_pred = polyval(p_comp, v_comp);
-            SS_res_comp = sum((f_comp - f_comp_pred).^2);
-            SS_tot_comp = sum((f_comp - mean(f_comp)).^2);
-            R2_comp = 1 - SS_res_comp/SS_tot_comp;
-            
-            results.(rf).(ff).FV_fit.pos.coeffs = p_comp;
-            results.(rf).(ff).FV_fit.pos.R2 = R2_comp;
-        else
-            results.(rf).(ff).FV_fit.pos.coeffs = [];
-            results.(rf).(ff).FV_fit.pos.R2 = NaN;
-        end
-        
-        % Rebound (negative velocity)
-        v_reb = v(v < 0);
-        f_reb = f(v < 0);
-        
-        % Accumulate data for combined fit
-        v_all_reb = [v_all_reb; v_reb];
-        f_all_reb = [f_all_reb; f_reb];
-        
-        if numel(v_reb) > poly_order + 1
-            p_reb = polyfit(v_reb, f_reb, poly_order);
-            
-            % Calculate R-squared
-            f_reb_pred = polyval(p_reb, v_reb);
-            SS_res_reb = sum((f_reb - f_reb_pred).^2);
-            SS_tot_reb = sum((f_reb - mean(f_reb)).^2);
-            R2_reb = 1 - SS_res_reb/SS_tot_reb;
-            
-            results.(rf).(ff).FV_fit.neg.coeffs = p_reb;
-            results.(rf).(ff).FV_fit.neg.R2 = R2_reb;
-        else
-            results.(rf).(ff).FV_fit.neg.coeffs = [];
-            results.(rf).(ff).FV_fit.neg.R2 = NaN;
-        end
-        
-        % Max velocity region
-        vmax_pos = max(v);
-        vmax_neg = min(v);
+        % --- Max velocity region (Per Frequency) ---
+        vmax_pos = max(v); vmax_neg = min(v);
         pos_mask = v >= (vmax_pos - max_vel_bin_width) & v <= (vmax_pos + max_vel_bin_width);
         neg_mask = v >= (vmax_neg - max_vel_bin_width) & v <= (vmax_neg + max_vel_bin_width);
-        
-        results.(rf).(ff).maxV.pos.mean_force = mean(f(pos_mask));
-        results.(rf).(ff).maxV.pos.unc_force  = uncertainty_tn(f(pos_mask));
-        results.(rf).(ff).maxV.pos.vmax       = vmax_pos;
-        
-        results.(rf).(ff).maxV.neg.mean_force = mean(f(neg_mask));
-        results.(rf).(ff).maxV.neg.unc_force  = uncertainty_tn(f(neg_mask));
-        results.(rf).(ff).maxV.neg.vmax       = vmax_neg;
+        results.(ff).maxV.pos.mean_force = mean(f(pos_mask)); results.(ff).maxV.pos.unc_force  = uncertainty_tn(f(pos_mask)); results.(ff).maxV.pos.vmax = vmax_pos;
+        results.(ff).maxV.neg.mean_force = mean(f(neg_mask)); results.(ff).maxV.neg.unc_force  = uncertainty_tn(f(neg_mask)); results.(ff).maxV.neg.vmax = vmax_neg;
     end
     
-    % Fit to all compression data from all frequencies in this run
-    if numel(v_all_comp) > poly_order + 1
-        p_comp_all = polyfit(v_all_comp, f_all_comp, poly_order);
-        
-        % Calculate R-squared
-        f_comp_pred_all = polyval(p_comp_all, v_all_comp);
-        SS_res_comp_all = sum((f_all_comp - f_comp_pred_all).^2);
-        SS_tot_comp_all = sum((f_all_comp - mean(f_all_comp)).^2);
-        R2_comp_all = 1 - SS_res_comp_all/SS_tot_comp_all;
-        
-        results.(rf).FV_fit_all.pos.coeffs = p_comp_all;
-        results.(rf).FV_fit_all.pos.R2 = R2_comp_all;
-    else
-        results.(rf).FV_fit_all.pos.coeffs = [];
-        results.(rf).FV_fit_all.pos.R2 = NaN;
+    % Step 2: Combined Polynomial Fits
+    Vmax_total = max(abs([v_all_comp; v_all_reb])); % Calculate total max velocity
+    V_threshold = Vmax_total * opp_vel_perc;
+    
+    % Compression (positive velocity) fit
+    v_opp_comp_mask = (v_all_reb > -V_threshold);
+    v_comp_all_plus_opp = [v_all_comp; v_all_reb(v_opp_comp_mask)];
+    f_comp_all_plus_opp = [f_all_comp; f_all_reb(v_opp_comp_mask)];
+    
+    results.FV_fit_all.pos.v_data = v_comp_all_plus_opp;
+    results.FV_fit_all.pos.f_data = f_comp_all_plus_opp;
+    [results.FV_fit_all.pos] = polyfit_data(v_comp_all_plus_opp, f_comp_all_plus_opp, poly_order);
+    
+    % Rebound (negative velocity) fit
+    v_opp_reb_mask = (v_all_comp < V_threshold);
+    v_reb_all_plus_opp = [v_all_reb; v_all_comp(v_opp_reb_mask)];
+    f_reb_all_plus_opp = [f_all_reb; f_all_comp(v_opp_reb_mask)];
+    
+    results.FV_fit_all.neg.v_data = v_reb_all_plus_opp;
+    results.FV_fit_all.neg.f_data = f_reb_all_plus_opp;
+    [results.FV_fit_all.neg] = polyfit_data(v_reb_all_plus_opp, f_reb_all_plus_opp, poly_order);
+
+    % --- Step 3: Combined Piecewise Linear Fits ---
+    v_fit_max_dyn = Vmax_total;
+    [results.PW_fit_all.pos] = fit_piecewise_linear(v_comp_all_plus_opp, f_comp_all_plus_opp, v_fit_max_dyn, v_knee_fixed, opp_vel_perc);
+    [results.PW_fit_all.neg] = fit_piecewise_linear(v_reb_all_plus_opp, f_reb_all_plus_opp, v_fit_max_dyn, v_knee_fixed, opp_vel_perc);
+end
+
+
+function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_fixed, opp_vel_perc)
+% FIT_PIECEWISE_LINEAR Fits a two-segment piecewise linear model with FIXED knee point.
+% Model: F = F0 + C_LS*min(|v|, v_knee) + C_HS*max(0, |v| - v_knee)
+
+    v_abs = abs(v_data);
+    
+    % 1. Filter data to the maximum fit velocity
+    mask = v_abs <= v_fit_max;
+    v = v_data(mask);
+    f = f_data(mask);
+    v_a = v_abs(mask);
+    
+    if isempty(v) || numel(v) < 5
+        model_results = initialize_nan_pw_results();
+        return;
     end
     
-    % Fit to all rebound data from all frequencies in this run
-    if numel(v_all_reb) > poly_order + 1
-        p_reb_all = polyfit(v_all_reb, f_all_reb, poly_order);
-        
-        % Calculate R-squared
-        f_reb_pred_all = polyval(p_reb_all, v_all_reb);
-        SS_res_reb_all = sum((f_all_reb - f_reb_pred_all).^2);
-        SS_tot_reb_all = sum((f_all_reb - mean(f_all_reb)).^2);
-        R2_reb_all = 1 - SS_res_reb_all/SS_tot_reb_all;
-        
-        results.(rf).FV_fit_all.neg.coeffs = p_reb_all;
-        results.(rf).FV_fit_all.neg.R2 = R2_reb_all;
+    % Determine sign: positive velocity data vs negative velocity data
+    is_positive_vel = mean(v) > 0;
+    
+    % --- STEP 1: Determine and subtract the Zero-Velocity Intercept (F0) ---
+    % Use the LOW-SPEED region near zero velocity for F0 estimation
+    V_threshold = v_fit_max * opp_vel_perc;
+    f0_mask = v_a < V_threshold;
+    
+    if any(f0_mask)
+        F0_mean = mean(f(f0_mask));
     else
-        results.(rf).FV_fit_all.neg.coeffs = [];
-        results.(rf).FV_fit_all.neg.R2 = NaN;
+        % Fallback: Use the mean force of the entire data set
+        F0_mean = mean(f);
+    end
+    
+    % Subtract F0 from force data: F' = F - F0
+    f_prime = f - F0_mean;
+    
+    % --- STEP 2: Fit with FIXED v_knee ---
+    vk = v_knee_fixed;
+    
+    % Create the 2-column design matrix M for the slopes
+    M = zeros(numel(v), 2);
+    
+    % Column 1: C_LS term (min(|v|, vk))
+    M(:, 1) = min(v_a, vk);
+    
+    % Column 2: C_HS term (max(0, |v| - vk))
+    M(:, 2) = max(0, v_a - vk);
+    
+    % Solve P = [C_LS; C_HS] using standard least squares
+    P = M \ f_prime;
+    
+    C_LS = P(1);
+    C_HS = P(2);
+    
+    % --- CONSTRAINT CHECK ---
+    valid_fit = true;
+    if is_positive_vel
+        % Compression: require positive slopes
+        if C_LS < 0 || C_HS < 0
+            valid_fit = false;
+        end
+    else
+        % Rebound: require negative slopes
+        if C_LS > 0 || C_HS > 0
+            valid_fit = false;
+        end
+    end
+    
+    % Check for degenerate solutions
+    if abs(C_LS) < 1e-6 && abs(C_HS) < 1e-6
+        valid_fit = false;
+    end
+    
+    % Calculate R-squared for this fit
+    f_prime_pred = M * P;
+    SS_res = sum((f_prime - f_prime_pred).^2);
+    SS_tot = sum((f_prime - mean(f_prime)).^2);
+    
+    if SS_tot < 1e-10
+        valid_fit = false;
+    end
+    
+    % --- STEP 3: Store the results ---
+    if valid_fit
+        R2 = 1 - (SS_res / SS_tot);
+        
+        model_results.F0 = F0_mean;
+        model_results.C_LS = C_LS;
+        model_results.C_HS = C_HS;
+        model_results.v_knee = vk;
+        model_results.R2 = R2;
+        model_results.v_data = v;
+        model_results.f_data = f;
+    else
+        model_results = initialize_nan_pw_results();
     end
 end
 
-save(fullfile(out_path, out_name), "results");
+function res = initialize_nan_pw_results()
+    res.F0   = NaN;
+    res.C_LS = NaN;
+    res.C_HS = NaN;
+    res.v_knee = NaN;
+    res.R2   = NaN;
+    res.v_data = [];
+    res.f_data = [];
+end
 
-function [bin_centers, mean_y, unc_y] = bin_profile(x, y, Nbins)
-    edges = linspace(min(x), max(x), Nbins+1);
-    bin_centers = 0.5 * (edges(1:end-1) + edges(2:end));
-    
-    % Force column vectors
-    bin_centers = bin_centers(:);
-    mean_y      = zeros(Nbins,1);
-    unc_y       = zeros(Nbins,1);
-    
-    for b = 1:Nbins
-        mask = x >= edges(b) & x < edges(b+1);
-        if any(mask)
-            mean_y(b) = mean(y(mask));
-            unc_y(b)  = uncertainty_tn(y(mask));
-        else
-            mean_y(b) = NaN;
-            unc_y(b)  = NaN;
+function fit_struct = polyfit_data(v, f, poly_order)
+    if numel(v) > poly_order + 1
+        p = polyfit(v, f, poly_order);
+        f_pred = polyval(p, v);
+        SS_res = sum((f - f_pred).^2);
+        SS_tot = sum((f - mean(f)).^2);
+        R2 = 1 - (SS_res / SS_tot);
+        fit_struct.coeffs = p;
+        fit_struct.R2 = R2;
+    else
+        fit_struct.coeffs = [];
+        fit_struct.R2 = NaN;
+    end
+end
+
+function [bin_centers, mean_y, unc_y] = bin_profile_modified(x, y, Nbins, bin_type)
+    if strcmpi(bin_type, 'uniform_x')
+        edges = linspace(min(x), max(x), Nbins+1);
+        bin_centers = 0.5 * (edges(1:end-1) + edges(2:end));
+        bin_centers = bin_centers(:);
+        mean_y      = zeros(Nbins,1);
+        unc_y       = zeros(Nbins,1);
+        for b = 1:Nbins
+            if b < Nbins
+                mask = x >= edges(b) & x < edges(b+1);
+            else 
+                mask = x >= edges(b) & x <= edges(b+1); 
+            end
+            if any(mask)
+                mean_y(b) = mean(y(mask));
+                unc_y(b)  = uncertainty_tn(y(mask));
+            else
+                mean_y(b) = NaN;
+                unc_y(b)  = NaN;
+            end
         end
+    else
+        error('Unsupported bin_type.');
     end
 end
 
 function unc = uncertainty_tn(data)
-    % Calculate uncertainty using t-distribution
-    % Returns the standard error of the mean multiplied by t-critical value
-    % for 95% confidence interval
-    
     n = numel(data);
-    
     if n <= 1
         unc = NaN;
         return;
     end
-    
-    % Standard error of the mean
     sem = std(data) / sqrt(n);
     dof = n - 1;
-    
-    % t-critical value for 99% confidence (two-tailed)
     t_crit = tinv(0.995, dof);
-    
-    % Uncertainty
     unc = t_crit * sem;
 end

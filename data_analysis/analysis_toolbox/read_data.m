@@ -63,7 +63,7 @@ for i = 1:length(files)
     acc = gradient(vel, dt);
     
     % Force
-    force = curr_data.("Force (N)");
+    force = curr_data.("Force (N)")/4.448;
     
     % Temperature filtering
     [bT,aT] = butter(2, fc_temp/(Fs/2));
