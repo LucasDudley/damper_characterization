@@ -10,7 +10,7 @@ out_name = "valving_results_data.mat";
 % Configurable bin counts
 Nbins_FD = 300;
 Nbins_FV = 200;
-Nbins_FV_all = 100;
+Nbins_FV_all = 200;
 max_vel_bin_width = 0.25;
 
 %% processing
@@ -33,7 +33,7 @@ for ri = 1:numel(run_fields)
         f = d.force(:);
         a = d.accel(:);
         
-        % 1. SPLITTING
+        % split the data by accel & deccel
         accel_mask = a > 0;
         decel_mask = a < 0;
         fd_pos_mask = v > 0;   % positive velocity → "accel"
