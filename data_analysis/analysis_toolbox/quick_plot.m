@@ -1,4 +1,6 @@
 clear, clc
+s = settings;
+s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
 
 %load data
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_test_data.mat")
@@ -7,7 +9,7 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 close all
 %f0_211, f0_421, f0_632, f0_842, f1_053
 
-test = 56;
+test = 26;
 freq = "f1_053";
 
 % plot test_data
@@ -89,77 +91,111 @@ function plot_raw(all_data, runNum, freqField)
 end
 
 function plot_processed(results, runNum, freqField)
-    
-    %access run
+
+    % Access run
     rf = sprintf("r%d", runNum);
-    
     if ~isfield(results, rf)
         error("Run %d not found in results", runNum);
     end
-    
     if ~isfield(results.(rf), freqField)
         error("Frequency field %s not found for run %d", freqField, runNum);
     end
-    
     d = results.(rf).(freqField);
     valve = results.(rf).valving;
     valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
                         valve.hsc, valve.hsr, valve.lsc, valve.lsr);
-    
-    figure;
+
+    % FORCE-DISPLACEMENT
+    figure('Name', sprintf('Run %d | %s | Force-Displacement', runNum, freqField));
     hold on; grid on;
-    
+
     % Force–Displacement pos
-    subplot(2,1,1); hold on;
     fill_shaded(d.FD.pos.disp, d.FD.pos.mean, d.FD.pos.unc, [0 0.447 0.741]);
     h1 = plot(d.FD.pos.disp, d.FD.pos.mean, 'Color', [0 0.447 0.741], 'LineWidth', 1.4);
-    
+
     % Force–Displacement neg
     fill_shaded(d.FD.neg.disp, d.FD.neg.mean, d.FD.neg.unc, [0.850 0.325 0.098]);
     h2 = plot(d.FD.neg.disp, d.FD.neg.mean, 'Color', [0.850 0.325 0.098], 'LineWidth', 1.4);
-    
+
     xlabel("Displacement (in)");
     ylabel("Force (N)");
-    title({sprintf("Run %d | %s | Force–Displacement", runNum, freqField), valve_str}, "Interpreter", "none");
+    title({sprintf("Run %d | %s | Force–Displacement", runNum, freqField), valve_str}, ...
+          "Interpreter", "none");
     legend([h1, h2], "Accel", "Decel");
-    
+
+
+    % FORCE-VELOCITY
+    figure('Name', sprintf('Run %d | %s | Force-Velocity', runNum, freqField));
+    hold on; grid on;
+
     % Force–Velocity accel
-    subplot(2,1,2); hold on;
     fill_shaded(d.FV.pos.velocity, d.FV.pos.mean, d.FV.pos.unc, [0 0.447 0.741]);
     h3 = plot(d.FV.pos.velocity, d.FV.pos.mean, 'Color', [0 0.447 0.741], 'LineWidth', 1.4);
-    
+
     % Force–Velocity decel
     fill_shaded(d.FV.neg.velocity, d.FV.neg.mean, d.FV.neg.unc, [0.850 0.325 0.098]);
     h4 = plot(d.FV.neg.velocity, d.FV.neg.mean, 'Color', [0.850 0.325 0.098], 'LineWidth', 1.4);
-    
+
     % Force–Velocity all
     fill_shaded(d.FV_all.velocity, d.FV_all.mean, d.FV_all.unc, [0.466 0.674 0.188]);
     h7 = plot(d.FV_all.velocity, d.FV_all.mean, 'Color', [0.466 0.674 0.188], 'LineWidth', 1.4);
-    
+
+
+    % Polynomial fits
+    if isfield(d, 'FV_fit')
+
+        % Positive polynomial fit → only for v > 0
+        if isfield(d.FV_fit, 'pos') && ~isempty(d.FV_fit.pos.coeffs)
+            v = d.FV_all.velocity(:);
+            mask_pos = v > 0;
+            if any(mask_pos)
+                v_fit_pos = linspace(min(v(mask_pos)), max(v(mask_pos)), 400)';
+                f_fit_pos = polyval(d.FV_fit.pos.coeffs, v_fit_pos);
+                plot(v_fit_pos, f_fit_pos, '--', 'Color', [0 0.2 0.4], 'LineWidth', 2);
+            end
+        end
+
+        % Negative polynomial fit → only for v < 0
+        if isfield(d.FV_fit, 'neg') && ~isempty(d.FV_fit.neg.coeffs)
+            v = d.FV_all.velocity(:);
+            mask_neg = v < 0;
+            if any(mask_neg)
+                v_fit_neg = linspace(min(v(mask_neg)), max(v(mask_neg)), 400)';
+                f_fit_neg = polyval(d.FV_fit.neg.coeffs, v_fit_neg);
+                plot(v_fit_neg, f_fit_neg, '--', 'Color', [0.5 0.1 0], 'LineWidth', 2);
+            end
+        end
+    end
+
+
     % Max Velocity Force points
     mv = d.maxV;
     h5 = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
         'r.', 'MarkerSize', 20, 'LineWidth', 1.8);
     h6 = errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
         'b.', 'MarkerSize', 20, 'LineWidth', 1.8);
-    
+
     xlabel("Velocity (in/s)");
     ylabel("Force (N)");
-    title({sprintf("Run %d | %s | Force–Velocity", runNum, freqField), valve_str}, "Interpreter", "none");
-    legend([h3, h4, h7, h5, h6], "Accel", "Decel", "Mean-All", "+Vmax", "-Vmax");
+    title({sprintf("Run %d | %s | Force–Velocity", runNum, freqField), valve_str}, ...
+          "Interpreter", "none");
+
+    legend([h3, h4, h7, h5, h6], ...
+           "Accel", "Decel", "Mean-All", "+Vmax", "-Vmax");
+
 end
+
 
 function fill_shaded(x, y_mean, y_unc, facecolor)
     % Creates a filled band using mean ± uncertainty
     x = x(:);
     y_mean = y_mean(:);
     y_unc  = y_unc(:);
-    
+
     % Upper and lower bounds
     y_upper = y_mean + y_unc;
     y_lower = y_mean - y_unc;
-    
-    % Polygon
+
     fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
          facecolor, 'FaceAlpha', 0.25, 'EdgeColor', 'none');
 end

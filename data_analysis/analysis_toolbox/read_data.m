@@ -10,7 +10,7 @@ out_name = "valving_test_data.mat";
 fc = 15;           % cutoff freq [Hz]
 fc_temp = 1;
 trim_start = 0.4; % motor acceleration
-trim_end = 1; % test end deccel
+trim_end = 2; % test end deccel
 
 %% data handling
 % Get list of all CSV files
