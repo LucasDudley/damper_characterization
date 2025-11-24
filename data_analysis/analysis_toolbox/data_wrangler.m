@@ -182,7 +182,6 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
     C_LS = P(1);
     C_HS = P(2);
     
-    % --- CONSTRAINT CHECK ---
     valid_fit = true;
     if is_positive_vel
         % Compression: require positive slopes

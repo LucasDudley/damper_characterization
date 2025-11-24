@@ -5,19 +5,21 @@ CONTOUR_LEVELS = 20;          % Number of contour levels
 INTERP_METHOD = 'linear';      
 SHOW_GRID = false;            
 MARKER_SIZE = 50;             
-% Define Unit String for Labels (using \mathrm{} for consistent font style)
 UNIT_LABEL = ' \mathrm{[lbf/(in/s)]}'; 
+
 % Load results data
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
-%% Extract Data (NO UNIT CONVERSION)
+%% Extract Data
 run_fields = fieldnames(results);
 run_fields = run_fields(~cellfun(@isempty, regexp(run_fields, "^r\d+$")));
+
 % Initialize storage arrays
 num_runs = numel(run_fields);
 hsc_vals = zeros(num_runs, 1);
 hsr_vals = zeros(num_runs, 1);
 lsc_vals = zeros(num_runs, 1);
 lsr_vals = zeros(num_runs, 1);
+
 % Storage for piecewise linear parameters (will hold original values: N/(m/s))
 C_LS_pos = zeros(num_runs, 1);
 C_HS_pos = zeros(num_runs, 1);
@@ -32,7 +34,7 @@ for i = 1:num_runs
     lsc_vals(i) = results.(rf).valving.lsc;
     lsr_vals(i) = results.(rf).valving.lsr;
     
-    % Get piecewise linear parameters (NO CONVERSION)
+    % Get piecewise linear parameters
     if isfield(results.(rf), 'PW_fit_all')
         % Positive velocity (compression)
         if isfield(results.(rf).PW_fit_all, 'pos')
@@ -53,6 +55,7 @@ for i = 1:num_runs
         end
     end
 end
+
 % Create high-resolution grids
 lsc_fine = linspace(min(lsc_vals), max(lsc_vals), GRID_RESOLUTION);
 hsc_fine = linspace(min(hsc_vals), max(hsc_vals), GRID_RESOLUTION);

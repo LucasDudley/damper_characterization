@@ -161,7 +161,7 @@ function plot_processed(results, runNum, freqField)
         end
     end
 
-    % --- Piecewise Linear fits (CORRECTED LOGIC) ---
+    % --- Piecewise Linear fits ---
     h_pw = [];
     if isfield(results.(rf), 'PW_fit_all')
         PW = results.(rf).PW_fit_all;
