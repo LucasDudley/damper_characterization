@@ -1,0 +1,194 @@
+clear, clc
+s = settings;
+s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
+
+%load data
+load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_test_data.mat")
+load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
+
+%% Plot multiple runs on single figure
+close all
+
+% Specify runs to plot
+% runs = [71, 76, 77, 78];
+
+lissajous_freq = 'f1_053';  % Adjust as needed
+
+% Plot all runs together
+plot_runs_comparison(results, runs, lissajous_freq);
+
+%% Function to plot multiple runs on one figure
+
+function plot_runs_comparison(results, runs, lissajous_freq)
+
+    % Colors & markers
+    colors  = lines(length(runs));
+    markers = {'o','s','d','^','v','>','<','p','h'};   % cycle markers
+
+    figure('Name', 'Force-Velocity Comparison | Multiple Runs');
+    hold on; grid off;
+
+    h_legend = [];
+    legend_str = {};
+
+    for r = 1:length(runs)
+        runNum = runs(r);
+        rf = sprintf("r%d", runNum);
+
+        if ~isfield(results, rf)
+            warning("Run %d not found in results, skipping", runNum);
+            continue;
+        end
+
+        run_data = results.(rf);
+        color     = colors(r,:);
+        marker    = markers{ mod(r-1, numel(markers)) + 1 };
+
+        % Check frequency
+        if ~isfield(run_data, lissajous_freq)
+            warning("Frequency %s not found for run %d, skipping", lissajous_freq, runNum);
+            continue;
+        end
+
+        d_liss = run_data.(lissajous_freq);
+
+        % --- Lissajous shaded band ---
+        fill_shaded(d_liss.FV.pos.velocity, d_liss.FV.pos.mean, d_liss.FV.pos.unc, color);
+        fill_shaded(d_liss.FV.neg.velocity, d_liss.FV.neg.mean, d_liss.FV.neg.unc, color);
+
+        % Solid mean line
+        h_liss = plot(d_liss.FV.pos.velocity, d_liss.FV.pos.mean, ...
+                      'Color', color, 'LineWidth', 1.2);
+        plot(d_liss.FV.neg.velocity, d_liss.FV.neg.mean, ...
+              'Color', color, 'LineWidth', 1.2);
+
+        if r == 1
+            h_lissajous = h_liss;
+        end
+
+        % --- Extrema Error Bars (Better styling) ---
+        all_fields = fieldnames(run_data);
+        freq_fields = all_fields(startsWith(all_fields, 'f'));
+
+        for f = 1:length(freq_fields)
+            freq = freq_fields{f};
+            d = run_data.(freq);
+            mv = d.maxV;
+
+            % POS
+            h_err = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
+                    'LineStyle','none', ...          % no connecting line
+                    'Marker', marker, ...
+                    'MarkerFaceColor', color, ...
+                    'MarkerEdgeColor', 'k', ...
+                    'Color', color * 0.5, ...        % slightly darker error bar
+                    'LineWidth', 1, ...
+                    'CapSize', 0);                   % remove caps
+
+            % NEG
+            errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
+                    'LineStyle','none', ...
+                    'Marker', marker, ...
+                    'MarkerFaceColor', color, ...
+                    'MarkerEdgeColor', 'k', ...
+                    'Color', color * 0.5, ...
+                    'LineWidth', 1, ...
+                    'CapSize', 0);
+
+            if r == 1 && f == 1
+                h_data = h_err;
+            end
+        end
+
+        % --- Polynomial Fit (fixed ranges) ---
+        if isfield(d_liss, 'FV_fit')
+            % Positive fit: evaluate only on positive velocities
+            if isfield(d_liss.FV_fit, 'pos') && ~isempty(d_liss.FV_fit.pos.coeffs)
+                v_pos_all = d_liss.FV.pos.velocity(:);
+                v_pos = v_pos_all(v_pos_all > 0);
+                if ~isempty(v_pos)
+                    v_fit_pos = linspace(min(v_pos), max(v_pos), 400)';
+                    f_fit_pos = polyval(d_liss.FV_fit.pos.coeffs, v_fit_pos);
+                    h_poly = plot(v_fit_pos, f_fit_pos, '--', 'Color', color, 'LineWidth', 1.7);
+                    if r == 1
+                        h_fit = h_poly;
+                    end
+                end
+            end
+
+            % Negative fit: evaluate only on negative velocities
+            if isfield(d_liss.FV_fit, 'neg') && ~isempty(d_liss.FV_fit.neg.coeffs)
+                v_neg_all = d_liss.FV.neg.velocity(:);
+                v_neg = v_neg_all(v_neg_all < 0);
+                if ~isempty(v_neg)
+                    v_fit_neg = linspace(min(v_neg), max(v_neg), 400)'; % min is most negative
+                    f_fit_neg = polyval(d_liss.FV_fit.neg.coeffs, v_fit_neg);
+                    plot(v_fit_neg, f_fit_neg, '--', 'Color', color, 'LineWidth', 1.7);
+                end
+            end
+        end
+
+        % Add legend element
+        valve = run_data.valving;
+        valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
+                            valve.hsc, valve.hsr, valve.lsc, valve.lsr);
+
+        h_legend(end+1) = plot(NaN, NaN, 'Color', color, ...
+                               'LineWidth', 1.6, 'Marker', marker, ...
+                               'MarkerFaceColor', color, 'MarkerEdgeColor','k');
+
+        legend_str{end+1} = valve_str;
+    end
+
+    % --- Zero reference axes ---
+    plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+    plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+
+    % Aesthetics
+    set(gca, 'FontName', 'Times New Roman');
+
+    xlabel('\bfVelocity\rm [\itin/s\rm]');
+    ylabel('\bfForce\rm [\itlbf\rm]');
+
+    % --- Legend ---
+    h_liss_generic = plot(NaN,NaN,'k-','LineWidth',1.6);
+    h_data_generic = plot(NaN,NaN,'ko','MarkerFaceColor','k');
+    h_fit_generic  = plot(NaN,NaN,'k--','LineWidth',1.6);
+
+    legend_elements = [h_liss_generic, h_data_generic, h_fit_generic, h_legend];
+    legend_labels   = [{sprintf('%s Lissajous', format_freq_name(lissajous_freq))}, ...
+                       {'Extrema Data'}, ...
+                       {'Polynomial Fit'}, ...
+                       legend_str];
+
+    leg = legend(legend_elements, legend_labels, 'Location','best', 'FontSize',9);
+    title(leg,'Valve Settings','FontWeight','bold','FontName','Times New Roman');
+
+end
+
+
+
+%% Helper function to format frequency names
+
+function formatted = format_freq_name(freq_str)
+    % Convert 'f0_211' to '0.211 Hz', 'f1_053' to '1.053 Hz', etc.
+    freq_str = char(freq_str);
+    if startsWith(freq_str, 'f')
+        freq_str = freq_str(2:end);
+    end
+    freq_str = strrep(freq_str, '_', '.');
+    formatted = sprintf('%s Hz', freq_str);
+end
+
+function fill_shaded(x, y_mean, y_unc, facecolor)
+
+    x = x(:);
+    y_mean = y_mean(:);
+    y_unc  = y_unc(:);
+
+    y_upper = y_mean + y_unc;
+    y_lower = y_mean - y_unc;
+
+    fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
+         facecolor, 'FaceAlpha', 0.23, 'EdgeColor', 'none');
+end
