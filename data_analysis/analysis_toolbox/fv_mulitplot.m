@@ -7,10 +7,11 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
 
 %% Plot multiple runs on single figure
-close all
+
 
 % Specify runs to plot
-% runs = [71, 76, 77, 78];
+%runs = [71, 76, 77, 78];
+runs = [10, 26, 42, 81];
 
 lissajous_freq = 'f1_053';  % Adjust as needed
 
@@ -157,7 +158,7 @@ function plot_runs_comparison(results, runs, lissajous_freq)
 
     legend_elements = [h_liss_generic, h_data_generic, h_fit_generic, h_legend];
     legend_labels   = [{sprintf('%s Lissajous', format_freq_name(lissajous_freq))}, ...
-                       {'Extrema Data'}, ...
+                       {'Velocity Extrema Sample'}, ...
                        {'Polynomial Fit'}, ...
                        legend_str];
 
