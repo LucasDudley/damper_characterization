@@ -11,7 +11,9 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 
 % Specify runs to plot
 %runs = [71, 76, 77, 78];
-runs = [10, 26, 42, 81];
+%runs = [10, 26, 42, 81];
+runs = [1,2,5,6];
+
 
 lissajous_freq = 'f1_053';  % Adjust as needed
 
