@@ -1,0 +1,224 @@
+%% Main Script: Temperature Investigation Plotting
+% This script loads data, defines run groups, and generates a comparative
+% Force-Velocity (FV) plot for different temperature conditions.
+
+clear, clc
+% Set figure graphics theme to 'light' (optional, relies on settings structure)
+s = settings;
+s.matlab.appearance.figure.GraphicsTheme.TemporaryValue = 'light';
+
+% --- Load Data ---
+% NOTE: Replace these placeholder paths with your actual file locations or use a relative path
+try
+    load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_test_data.mat", 'test_data');
+    load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat", 'results');
+catch ME
+    warning('Error loading data files. Please check the file paths: %s', ME.message);
+    return; % Stop execution if data cannot be loaded
+end
+
+%% Define Run Groups and Colors
+cold_runs = [1, 2];
+hot_runs = [5, 6];
+
+% Define colors for plotting
+cold_color = [0.2, 0.4, 0.8];  % Cool blue
+hot_color  = [0.9, 0.2, 0.2];  % Warm red
+
+lissajous_freq = 'f2p0'; 
+
+%% Generate Plot
+plot_temperature_investigation(results, test_data, ...
+                               cold_runs, hot_runs, cold_color, hot_color, lissajous_freq);
+
+%% Main Plotting Function
+% =========================================================================
+function plot_temperature_investigation(results, test_data, cold_runs, hot_runs, cold_color, hot_color, lissajous_freq)
+    
+    % Get temperatures for use in the legend
+    [cold_temps_mean, cold_temps_std] = get_run_temperatures(test_data, cold_runs);
+    [hot_temps_mean, hot_temps_std] = get_run_temperatures(test_data, hot_runs);
+    
+    % Initialize figure
+    figure('Name', 'Temperature Investigation | Force-Velocity Response', ...
+           'Position', [100, 100, 1200, 700]);
+    hold on; grid on;
+    
+    % Markers for different runs
+    markers = {'o','s','d','^','v','>','<','p'};
+    
+    h_legend = [];
+    legend_str = {};
+    
+    % --- Plot COLD runs ---
+    [h_legend, legend_str] = plot_run_group(cold_runs, cold_temps_mean, cold_temps_std, ...
+                                            cold_color, markers, results, h_legend, legend_str, 0, lissajous_freq);
+
+    % --- Plot HOT runs ---
+    [h_legend, legend_str] = plot_run_group(hot_runs, hot_temps_mean, hot_temps_std, ...
+                                            hot_color, markers, results, h_legend, legend_str, length(cold_runs), lissajous_freq);
+    
+    % --- Zero reference lines ---
+    plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+    plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+    
+    
+    % --- Aesthetics and Labels ---
+    set(gca, 'FontName', 'Times New Roman', 'FontSize', 11);
+    xlabel('\bfVelocity\rm [\itin/s\rm]', 'FontSize', 13);
+    ylabel('\bfForce\rm [\itlbf\rm]', 'FontSize', 13);
+    title('\bfTemperature Investigation: Force-Velocity Characteristics\rm', ...
+          'FontSize', 15, 'FontName', 'Times New Roman');
+    
+    % Legend with custom title
+    leg = legend(h_legend, legend_str, 'Location', 'best', ...
+                 'FontSize', 9, 'FontName', 'Courier New');
+    title(leg, sprintf('\\bf%s\\rm | %s | %s', ...
+                       'Test Conditions', ...
+                       'Temperature [°F]', ...
+                       'Valve Settings [clicks]'), ...
+          'FontWeight', 'bold', 'FontName', 'Times New Roman');
+    
+    % Add subtle grid
+    grid on;
+    set(gca, 'GridAlpha', 0.15, 'GridLineStyle', ':');
+    
+    hold off;
+end
+
+%% Helper Plotting Function to Reduce Redundancy
+% =========================================================================
+function [h_legend, legend_str] = plot_run_group(runs, run_temps_mean, run_temps_std, ...
+                                                  group_color, markers, results, h_legend, legend_str, marker_offset, lissajous_freq)
+    
+    for r = 1:length(runs)
+        runNum = runs(r);
+        runField = sprintf("r%d", runNum); % Consistent field name
+        
+        if ~isfield(results, runField)
+            warning("Run %d not found in results data.", runNum);
+            continue;
+        end
+        
+        run_data = results.(runField);
+        marker = markers{r + marker_offset};
+        
+        % Get all frequency fields
+        all_fields = fieldnames(run_data);
+        freq_fields = all_fields(startsWith(all_fields, 'f'));
+        
+        % Plot the specified frequency Lissajous
+        if ismember(lissajous_freq, freq_fields)
+            d = run_data.(lissajous_freq);
+            
+            % Lissajous curves
+            if isfield(d, 'FV')
+                % Shaded Uncertainty
+                fill_shaded(d.FV.pos.velocity, d.FV.pos.mean, d.FV.pos.unc, group_color, 0.18);
+                fill_shaded(d.FV.neg.velocity, d.FV.neg.mean, d.FV.neg.unc, group_color, 0.18);
+                
+                % Mean Line
+                plot(d.FV.pos.velocity, d.FV.pos.mean, '-', ...
+                     'Color', group_color, 'LineWidth', 0.8, 'HandleVisibility','off');
+                plot(d.FV.neg.velocity, d.FV.neg.mean, '-', ...
+                     'Color', group_color, 'LineWidth', 0.8, 'HandleVisibility','off');
+            end
+        else
+            warning('Frequency %s not found in run %d', lissajous_freq, runNum);
+        end
+        
+        % Plot maxV data from ALL frequencies
+        for f = 1:length(freq_fields)
+            freq = freq_fields{f};
+            d = run_data.(freq);
+            
+            % Velocity extrema points (maxV)
+            if isfield(d, 'maxV')
+                mv = d.maxV;
+                line_color = group_color * 0.6; % Darker shade for error bars
+                
+                % Positive velocity peak
+                errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
+                        'LineStyle','none', 'Marker', marker, ...
+                        'MarkerSize', 6, 'MarkerFaceColor', group_color, ...
+                        'MarkerEdgeColor', 'k', 'Color', line_color, ...
+                        'LineWidth', 1, 'CapSize', 0, 'HandleVisibility','off');
+                
+                % Negative velocity peak
+                errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
+                        'LineStyle','none', 'Marker', marker, ...
+                        'MarkerSize', 6, 'MarkerFaceColor', group_color, ...
+                        'MarkerEdgeColor', 'k', 'Color', line_color, ...
+                        'LineWidth', 1, 'CapSize', 0, 'HandleVisibility','off');
+            end
+        end
+        
+        % --- Legend Entry ---
+        valve = run_data.valving;
+        temp_mean = run_temps_mean(r);
+        temp_std = run_temps_std(r);
+        
+        h_legend(end+1) = plot(NaN, NaN, 'Color', group_color, ...
+                               'LineWidth', 2.5, 'Marker', marker, ...
+                               'MarkerSize', 8, ...
+                               'MarkerFaceColor', group_color, 'MarkerEdgeColor','k');
+        
+        legend_str{end+1} = sprintf('Run %d | %.1f±%.1f | HSC%.1f HSR%.1f LSC%.1f LSR%.1f', ...
+                                    runNum, temp_mean, temp_std, valve.hsc, valve.hsr, valve.lsc, valve.lsr);
+    end
+end
+
+%% Helper function to get temperatures with mean and std
+% =========================================================================
+function [temps_mean, temps_std] = get_run_temperatures(test_data, runs)
+    temps_mean = zeros(1, length(runs));
+    temps_std = zeros(1, length(runs));
+    
+    for r = 1:length(runs)
+        runNum = runs(r);
+        runField = sprintf("r%d", runNum);
+        
+        if ~isfield(test_data, runField)
+            temps_mean(r) = NaN;
+            temps_std(r) = NaN;
+            continue;
+        end
+        
+        freq_fields = fieldnames(test_data.(runField));
+        freq_fields = freq_fields(startsWith(freq_fields, "f"));
+        temp_list = [];
+        
+        for f = 1:length(freq_fields)
+            freqField = freq_fields{f};
+            if isfield(test_data.(runField).(freqField), 'temp')
+                temp_data = test_data.(runField).(freqField).temp;
+                % Handle both scalar and vector temperature data
+                temp_list = [temp_list; temp_data(:)];
+            end
+        end
+        
+        if isempty(temp_list)
+            temps_mean(r) = NaN;
+            temps_std(r) = NaN;
+        else
+            temps_mean(r) = mean(temp_list);
+            temps_std(r) = std(temp_list);
+        end
+    end
+end
+
+%% Helper function for shaded fills with configurable alpha
+% =========================================================================
+function fill_shaded(x, y_mean, y_unc, facecolor, alpha)
+    x = x(:);
+    y_mean = y_mean(:);
+    y_unc  = y_unc(:);
+    
+    y_upper = y_mean + y_unc;
+    y_lower = y_mean - y_unc;
+    
+    % Use the fill function to draw the shaded area
+    fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
+         facecolor, 'FaceAlpha', alpha, 'EdgeColor', 'none', ...
+         'HandleVisibility', 'off');
+end
