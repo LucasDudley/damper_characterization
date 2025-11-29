@@ -1,4 +1,6 @@
 clear, clc, close all
+s = settings;
+s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
 %% PLOTTING PARAMETERS 
 GRID_RESOLUTION = 20;         % Number of points for interpolation grid
 CONTOUR_LEVELS = 20;          % Number of contour levels 
