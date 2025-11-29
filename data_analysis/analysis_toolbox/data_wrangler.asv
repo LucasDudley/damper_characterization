@@ -15,9 +15,7 @@ poly_order = 3;
 opp_vel_perc = 0.15; % percent of comp/rebound to consider in fit
 
 % Piecewise Linear Fit Settings 
-v_knee_search_points = 20; % Number of points to test for the optimal knee velocity
-v_knee_min = 0.75;
-v_knee_max = 0.75;
+v_knee_fixed = 0.75;
 
 load(load_path, "test_data");
 run_fields = fieldnames(test_data); % Only keep "rX" (avoid run_guide)
@@ -31,7 +29,7 @@ for ri = 1:numel(run_fields)
     run_results = process_run_data(test_data.(rf), ...
                                    Nbins_FD, Nbins_FV, Nbins_FV_all, ...
                                    max_vel_bin_width, poly_order, opp_vel_perc, ...
-                                   v_knee_search_points, v_knee_min, v_knee_max); % Removed v_fit_max from args
+                                   v_knee_fixed); % Removed v_fit_max from args
     
     results.(rf) = run_results;
 end
@@ -41,7 +39,7 @@ save(fullfile(out_path, out_name), "results");
 
 %% Helper Functions
 
-function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, max_vel_bin_width, poly_order, opp_vel_perc, v_knee_search_points, v_knee_min, v_knee_max)
+function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, max_vel_bin_width, poly_order, opp_vel_perc, v_knee_fixed)
 % PROCESS_RUN_DATA Processes data for a single test run (e.g., 'r1').
 
     results.valving = run_data.valving;
@@ -125,27 +123,15 @@ function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, 
     [results.FV_fit_all.neg] = polyfit_data(v_reb_all_plus_opp, f_reb_all_plus_opp, poly_order);
 
     % --- Step 3: Combined Piecewise Linear Fits ---
-    
     v_fit_max_dyn = Vmax_total;
-
-    % Compression Piecewise Fit
-    [results.PW_fit_all.pos] = fit_piecewise_linear(v_comp_all_plus_opp, f_comp_all_plus_opp, v_fit_max_dyn, v_knee_search_points, v_knee_min, v_knee_max, opp_vel_perc);
-    
-    % Rebound Piecewise Fit
-    [results.PW_fit_all.neg] = fit_piecewise_linear(v_reb_all_plus_opp, f_reb_all_plus_opp, v_fit_max_dyn, v_knee_search_points, v_knee_min, v_knee_max, opp_vel_perc);
+    [results.PW_fit_all.pos] = fit_piecewise_linear(v_comp_all_plus_opp, f_comp_all_plus_opp, v_fit_max_dyn, v_knee_fixed, opp_vel_perc);
+    [results.PW_fit_all.neg] = fit_piecewise_linear(v_reb_all_plus_opp, f_reb_all_plus_opp, v_fit_max_dyn, v_knee_fixed, opp_vel_perc);
 end
 
 
 function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_fixed, opp_vel_perc)
 % FIT_PIECEWISE_LINEAR Fits a two-segment piecewise linear model with FIXED knee point.
 % Model: F = F0 + C_LS*min(|v|, v_knee) + C_HS*max(0, |v| - v_knee)
-% 
-% Inputs:
-%   v_data         - Velocity data (can include both positive and negative)
-%   f_data         - Force data
-%   v_fit_max      - Maximum velocity magnitude to include in fit
-%   v_knee_fixed   - FIXED knee velocity (transition point between LS and HS)
-%   opp_vel_perc   - Percentage of max velocity to use for F0 estimation
 
     v_abs = abs(v_data);
     
@@ -163,7 +149,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
     % Determine sign: positive velocity data vs negative velocity data
     is_positive_vel = mean(v) > 0;
     
-    % --- STEP 1: Determine and subtract the Zero-Velocity Intercept (F0) ---
+    % STEP 1: Determine and subtract the Zero-Velocity Intercept (F0) 
     % Use the LOW-SPEED region near zero velocity for F0 estimation
     V_threshold = v_fit_max * opp_vel_perc;
     f0_mask = v_a < V_threshold;
@@ -175,13 +161,10 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         F0_mean = mean(f);
     end
     
-    % Subtract F0 from force data: F' = F - F0
     f_prime = f - F0_mean;
     
-    % --- STEP 2: Fit with FIXED v_knee ---
+    % STEP 2: Fit with v_knee
     vk = v_knee_fixed;
-    
-    % Create the 2-column design matrix M for the slopes
     M = zeros(numel(v), 2);
     
     % Column 1: C_LS term (min(|v|, vk))
@@ -196,7 +179,6 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
     C_LS = P(1);
     C_HS = P(2);
     
-    % --- CONSTRAINT CHECK ---
     valid_fit = true;
     if is_positive_vel
         % Compression: require positive slopes
@@ -224,7 +206,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         valid_fit = false;
     end
     
-    % --- STEP 3: Store the results ---
+    % STEP 3: Store the results
     if valid_fit
         R2 = 1 - (SS_res / SS_tot);
         

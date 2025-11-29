@@ -21,14 +21,18 @@ hsc_vals = zeros(num_runs, 1);
 hsr_vals = zeros(num_runs, 1);
 lsc_vals = zeros(num_runs, 1);
 lsr_vals = zeros(num_runs, 1);
+run_names = cell(num_runs, 1); % Store run names
 
 % Storage for piecewise linear parameters (will hold original values: N/(m/s))
 C_LS_pos = zeros(num_runs, 1);
 C_HS_pos = zeros(num_runs, 1);
 C_LS_neg = zeros(num_runs, 1);
 C_HS_neg = zeros(num_runs, 1);
+R2_pos = zeros(num_runs, 1); % R-squared for compression
+R2_neg = zeros(num_runs, 1); % R-squared for rebound
 for i = 1:num_runs
     rf = run_fields{i};
+    run_names{i} = rf; % Store the run name
     
     % Get valve settings
     hsc_vals(i) = results.(rf).valving.hsc;
@@ -42,18 +46,30 @@ for i = 1:num_runs
         if isfield(results.(rf).PW_fit_all, 'pos')
             C_LS_pos(i) = results.(rf).PW_fit_all.pos.C_LS;
             C_HS_pos(i) = results.(rf).PW_fit_all.pos.C_HS;
+            if isfield(results.(rf).PW_fit_all.pos, 'R2')
+                R2_pos(i) = results.(rf).PW_fit_all.pos.R2;
+            else
+                R2_pos(i) = NaN;
+            end
         else
             C_LS_pos(i) = NaN;
             C_HS_pos(i) = NaN;
+            R2_pos(i) = NaN;
         end
         
         % Negative velocity (rebound)
         if isfield(results.(rf).PW_fit_all, 'neg')
             C_LS_neg(i) = results.(rf).PW_fit_all.neg.C_LS;
             C_HS_neg(i) = results.(rf).PW_fit_all.neg.C_HS;
+            if isfield(results.(rf).PW_fit_all.neg, 'R2')
+                R2_neg(i) = results.(rf).PW_fit_all.neg.R2;
+            else
+                R2_neg(i) = NaN;
+            end
         else
             C_LS_neg(i) = NaN;
             C_HS_neg(i) = NaN;
+            R2_neg(i) = NaN;
         end
     end
 end
@@ -67,7 +83,7 @@ hsr_fine = linspace(min(hsr_vals), max(hsr_vals), GRID_RESOLUTION);
 [LSR_grid, HSR_grid] = meshgrid(lsr_fine, hsr_fine);
 
 %% Piecewise Linear Damping Coefficients
-figure('Name', 'Piecewise Linear Damping Coefficients', 'Position', [100, 100, 1000, 700]);
+fig = figure('Name', 'Piecewise Linear Damping Coefficients', 'Position', [100, 100, 1000, 700]);
 
 % C_LS Compression 
 subplot(2, 2, 1);
@@ -75,18 +91,17 @@ CLS_grid = griddata(lsc_vals, hsc_vals, C_LS_pos, LSC_grid, HSC_grid, INTERP_MET
 contourf(LSC_grid, HSC_grid, CLS_grid, CONTOUR_LEVELS, 'LineStyle', 'none');
 caxis([min(C_LS_pos), max(C_LS_pos)]);
 cb1 = colorbar;
-% All Times New Roman, fixed LaTeX
 cb1.Label.String = '$C_{LS}$ [lbf/(in/s)]';
 cb1.Label.Interpreter = 'latex';
 cb1.FontName = 'Times New Roman'; 
 hold on;
-scatter(lsc_vals, hsc_vals, MARKER_SIZE, C_LS_pos, 'filled', 'MarkerEdgeColor','k');
+s1 = scatter(lsc_vals, hsc_vals, MARKER_SIZE, C_LS_pos, 'filled', 'MarkerEdgeColor','k');
+s1.ButtonDownFcn = @(src,event) showRunInfo(src, event, lsc_vals, hsc_vals, run_names, R2_pos, 'compression');
 xlabel('LSC Setting','FontName','Times New Roman','FontWeight', 'bold');
 ylabel('HSC Setting','FontName','Times New Roman','FontWeight', 'bold');
 title('$C_{LS}$','Interpreter','latex','FontName','Times New Roman');
 box off
-set(gca, 'FontName', 'Times New Roman'); % Set axes numbers font
-% Force Y-ticks to be integers
+set(gca, 'FontName', 'Times New Roman');
 y_ticks = get(gca, 'YTick');
 y_ticks_int = unique(round(y_ticks));
 set(gca, 'YTick', y_ticks_int);
@@ -97,18 +112,17 @@ CHS_grid = griddata(lsc_vals, hsc_vals, C_HS_pos, LSC_grid, HSC_grid, INTERP_MET
 contourf(LSC_grid, HSC_grid, CHS_grid, CONTOUR_LEVELS, 'LineStyle', 'none');
 caxis([min(C_HS_pos), max(C_HS_pos)]);
 cb2 = colorbar;
-% All Times New Roman, fixed LaTeX
 cb2.Label.String = '$C_{HS}$ [lbf/(in/s)]';
 cb2.Label.Interpreter = 'latex';
 cb2.FontName = 'Times New Roman';
 hold on;
-scatter(lsc_vals, hsc_vals, MARKER_SIZE, C_HS_pos, 'filled', 'MarkerEdgeColor','k');
+s2 = scatter(lsc_vals, hsc_vals, MARKER_SIZE, C_HS_pos, 'filled', 'MarkerEdgeColor','k');
+s2.ButtonDownFcn = @(src,event) showRunInfo(src, event, lsc_vals, hsc_vals, run_names, R2_pos, 'compression');
 xlabel('LSC Setting','FontName','Times New Roman','FontWeight', 'bold');
 ylabel('HSC Setting','FontName','Times New Roman','FontWeight', 'bold');
 title('$C_{HS}$','Interpreter','latex','FontName','Times New Roman');
 box off
-set(gca, 'FontName', 'Times New Roman'); % Set axes numbers font
-% Force Y-ticks to be integers
+set(gca, 'FontName', 'Times New Roman');
 y_ticks = get(gca, 'YTick');
 y_ticks_int = unique(round(y_ticks));
 set(gca, 'YTick', y_ticks_int);
@@ -119,18 +133,17 @@ CLS_grid = griddata(lsr_vals, hsr_vals, C_LS_neg, LSR_grid, HSR_grid, INTERP_MET
 contourf(LSR_grid, HSR_grid, CLS_grid, CONTOUR_LEVELS, 'LineStyle', 'none');
 caxis([min(C_LS_neg), max(C_LS_neg)]);
 cb3 = colorbar;
-% All Times New Roman, fixed LaTeX
 cb3.Label.String = '$C_{LS}$ [lbf/(in/s)]';
 cb3.Label.Interpreter = 'latex';
 cb3.FontName = 'Times New Roman';
 hold on;
-scatter(lsr_vals, hsr_vals, MARKER_SIZE, C_LS_neg, 'filled', 'MarkerEdgeColor','k');
+s3 = scatter(lsr_vals, hsr_vals, MARKER_SIZE, C_LS_neg, 'filled', 'MarkerEdgeColor','k');
+s3.ButtonDownFcn = @(src,event) showRunInfo(src, event, lsr_vals, hsr_vals, run_names, R2_neg, 'rebound');
 xlabel('LSR Setting','FontName','Times New Roman','FontWeight', 'bold');
 ylabel('HSR Setting','FontName','Times New Roman','FontWeight', 'bold');
 title('$C_{LS}$','Interpreter','latex','FontName','Times New Roman');
 box off
-set(gca, 'FontName', 'Times New Roman'); % Set axes numbers font
-% Force Y-ticks to be integers
+set(gca, 'FontName', 'Times New Roman');
 y_ticks = get(gca, 'YTick');
 y_ticks_int = unique(round(y_ticks));
 set(gca, 'YTick', y_ticks_int);
@@ -141,18 +154,17 @@ CHS_grid = griddata(lsr_vals, hsr_vals, C_HS_neg, LSR_grid, HSR_grid, INTERP_MET
 contourf(LSR_grid, HSR_grid, CHS_grid, CONTOUR_LEVELS, 'LineStyle', 'none');
 caxis([min(C_HS_neg), max(C_HS_neg)]);
 cb4 = colorbar;
-% All Times New Roman, fixed LaTeX
 cb4.Label.String = '$C_{HS}$ [lbf/(in/s)]';
 cb4.Label.Interpreter = 'latex';
 cb4.FontName = 'Times New Roman';
 hold on;
-scatter(lsr_vals, hsr_vals, MARKER_SIZE, C_HS_neg, 'filled', 'MarkerEdgeColor','k');
+s4 = scatter(lsr_vals, hsr_vals, MARKER_SIZE, C_HS_neg, 'filled', 'MarkerEdgeColor','k');
+s4.ButtonDownFcn = @(src,event) showRunInfo(src, event, lsr_vals, hsr_vals, run_names, R2_neg, 'rebound');
 xlabel('LSR Setting','FontName','Times New Roman','FontWeight', 'bold');
 ylabel('HSR Setting','FontName','Times New Roman','FontWeight', 'bold');
 title('$C_{HS}$','Interpreter','latex','FontName','Times New Roman');
 box off
-set(gca, 'FontName', 'Times New Roman'); % Set axes numbers font
-% Force Y-ticks to be integers
+set(gca, 'FontName', 'Times New Roman');
 y_ticks = get(gca, 'YTick');
 y_ticks_int = unique(round(y_ticks));
 set(gca, 'YTick', y_ticks_int);
@@ -166,10 +178,53 @@ for i = 1:length(h)
 end
 
 % Add centered text labels for Compression and Rebound
-% Adjusted vertical position (0.94 -> 0.93) and (0.48 -> 0.47)
 annotation('textbox', [0.35, 0.94, 0.3, 0.05], 'String', 'Compression Damping', ...
     'FontName', 'Times New Roman', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'EdgeColor', 'none');
 annotation('textbox', [0.35, 0.48, 0.3, 0.05], 'String', 'Rebound Damping', ...
     'FontName', 'Times New Roman', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'EdgeColor', 'none');
+
+%% Callback function to display run information
+function showRunInfo(~, event, x_vals, y_vals, run_names, R2_vals, damping_type)
+    % Get the click position
+    click_pos = event.IntersectionPoint(1:2);
+    
+    % Find the closest data point
+    distances = sqrt((x_vals - click_pos(1)).^2 + (y_vals - click_pos(2)).^2);
+    [~, idx] = min(distances);
+    
+    % Extract run number from run name (e.g., 'r15' -> '15')
+    run_name = run_names{idx};
+    run_number = regexp(run_name, '\d+', 'match');
+    if ~isempty(run_number)
+        run_number = run_number{1};
+    else
+        run_number = run_name;
+    end
+    
+    % Create info string
+    if strcmp(damping_type, 'compression')
+        info_str = sprintf('Run: %s\nLSC: %.1f\nHSC: %.1f\nR²: %.4f', ...
+            run_name, x_vals(idx), y_vals(idx), R2_vals(idx));
+    else % rebound
+        info_str = sprintf('Run: %s\nLSR: %.1f\nHSR: %.1f\nR²: %.4f', ...
+            run_name, x_vals(idx), y_vals(idx), R2_vals(idx));
+    end
+    
+    % Create or update text annotation on the plot
+    ax = gca;
+    delete(findall(ax, 'Tag', 'RunInfoText')); % Remove previous annotation
+    
+    % Create multi-line label
+    if strcmp(damping_type, 'compression')
+        label_str = sprintf('%s\nR²=%.3f', run_name, R2_vals(idx));
+    else
+        label_str = sprintf('%s\nR²=%.3f', run_name, R2_vals(idx));
+    end
+    
+    text(x_vals(idx), y_vals(idx), sprintf('  %s', label_str), ...
+        'FontName', 'Times New Roman', 'FontSize', 9, 'FontWeight', 'bold', ...
+        'BackgroundColor', 'white', 'EdgeColor', 'black', 'Margin', 2, ...
+        'Tag', 'RunInfoText', 'HorizontalAlignment', 'left');
+end

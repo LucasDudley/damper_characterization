@@ -34,7 +34,7 @@ for ri = 1:numel(run_fields)
     results.(rf) = run_results;
 end
 
-% --- Save Results ---
+% Save Results
 save(fullfile(out_path, out_name), "results");
 
 %% Helper Functions
@@ -67,23 +67,23 @@ function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, 
         fd_pos_mask = v > 0;
         fd_neg_mask = v < 0;
         
-        % --- FD (Force-Displacement) Plot Binning (uses Nbins_FD) ---
+        %FD (Force-Displacement) Plot Binning
         [x_bins, fd_mean_pos, fd_unc_pos] = bin_profile_modified(x(fd_pos_mask), f(fd_pos_mask), Nbins_FD, 'uniform_x');
         [~,      fd_mean_neg, fd_unc_neg] = bin_profile_modified(x(fd_neg_mask), f(fd_neg_mask), Nbins_FD, 'uniform_x');
         results.(ff).FD.pos.disp = x_bins; results.(ff).FD.pos.mean = fd_mean_pos; results.(ff).FD.pos.unc  = fd_unc_pos;
         results.(ff).FD.neg.disp = x_bins; results.(ff).FD.neg.mean = fd_mean_neg; results.(ff).FD.neg.unc  = fd_unc_neg;
         
-        % --- FV (Force-Velocity) Plot Binning (Split by Accel Sign, uses Nbins_FV) ---
+        %FV (Force-Velocity) Plot Binning (Split by Accel Sign, uses Nbins_FV) 
         [v_bins, fv_mean_acc, fv_unc_acc] = bin_profile_modified(v(accel_mask), f(accel_mask), Nbins_FV, 'uniform_x');
         [~,      fv_mean_dec, fv_unc_dec] = bin_profile_modified(v(decel_mask), f(decel_mask), Nbins_FV, 'uniform_x');
         results.(ff).FV.pos.velocity = v_bins; results.(ff).FV.pos.mean = fv_mean_acc; results.(ff).FV.pos.unc = fv_unc_acc;
         results.(ff).FV.neg.velocity = v_bins; results.(ff).FV.neg.mean = fv_mean_dec; results.(ff).FV.neg.unc = fv_unc_dec;
         
-        % --- FV_all Plot Binning (uses Nbins_FV_all) ---
+        %FV_all Plot Binning (uses Nbins_FV_all)
         [v_bins2, fv_mean_all, fv_unc_all] = bin_profile_modified(v, f, Nbins_FV_all, 'uniform_x');
         results.(ff).FV_all.velocity = v_bins2; results.(ff).FV_all.mean = fv_mean_all; results.(ff).FV_all.unc = fv_unc_all;
         
-        % --- Polynomial Fits (Per Frequency) ---
+        % Polynomial Fits (Per Frequency)
         v_comp = v(v > 0); f_comp = f(v > 0);
         v_all_comp = [v_all_comp; v_comp]; f_all_comp = [f_all_comp; f_comp];
         [results.(ff).FV_fit.pos] = polyfit_data(v_comp, f_comp, poly_order);
@@ -92,7 +92,7 @@ function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, 
         v_all_reb = [v_all_reb; v_reb]; f_all_reb = [f_all_reb; f_reb];
         [results.(ff).FV_fit.neg] = polyfit_data(v_reb, f_reb, poly_order);
         
-        % --- Max velocity region (Per Frequency) ---
+        % Max velocity region (Per Frequency)
         vmax_pos = max(v); vmax_neg = min(v);
         pos_mask = v >= (vmax_pos - max_vel_bin_width) & v <= (vmax_pos + max_vel_bin_width);
         neg_mask = v >= (vmax_neg - max_vel_bin_width) & v <= (vmax_neg + max_vel_bin_width);
@@ -100,7 +100,7 @@ function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, 
         results.(ff).maxV.neg.mean_force = mean(f(neg_mask)); results.(ff).maxV.neg.unc_force  = uncertainty_tn(f(neg_mask)); results.(ff).maxV.neg.vmax = vmax_neg;
     end
     
-    % Step 2: Combined Polynomial Fits
+    %Combined Polynomial Fits
     Vmax_total = max(abs([v_all_comp; v_all_reb])); % Calculate total max velocity
     V_threshold = Vmax_total * opp_vel_perc;
     
@@ -135,7 +135,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
 
     v_abs = abs(v_data);
     
-    % 1. Filter data to the maximum fit velocity
+    % Filter data to the maximum fit velocity
     mask = v_abs <= v_fit_max;
     v = v_data(mask);
     f = f_data(mask);
@@ -149,7 +149,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
     % Determine sign: positive velocity data vs negative velocity data
     is_positive_vel = mean(v) > 0;
     
-    % --- STEP 1: Determine and subtract the Zero-Velocity Intercept (F0) ---
+    % STEP 1: Determine and subtract the Zero-Velocity Intercept (F0)
     % Use the LOW-SPEED region near zero velocity for F0 estimation
     V_threshold = v_fit_max * opp_vel_perc;
     f0_mask = v_a < V_threshold;
@@ -161,13 +161,10 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         F0_mean = mean(f);
     end
     
-    % Subtract F0 from force data: F' = F - F0
     f_prime = f - F0_mean;
     
-    % --- STEP 2: Fit with FIXED v_knee ---
+    % STEP 2: Fit with v_knee
     vk = v_knee_fixed;
-    
-    % Create the 2-column design matrix M for the slopes
     M = zeros(numel(v), 2);
     
     % Column 1: C_LS term (min(|v|, vk))
@@ -209,7 +206,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         valid_fit = false;
     end
     
-    % --- STEP 3: Store the results ---
+    % STEP 3: Store the results
     if valid_fit
         R2 = 1 - (SS_res / SS_tot);
         
