@@ -4,29 +4,34 @@ clear, clc, close all
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
 addpath('D:\AME441_Code\damper_characterization\ohlins_model')
 
-
-%% Plot comparison
-piston_vel = linspace(-5,5,200);
+%%
 
 % Specify runs to plot
-runs = [106]; % our data to plot
+runs = [106, 83, 84, 108]; % our data to plot
 
 % [LSC, HSC, LSR, HSR] settings for ohlins data
 settings = [
     1 4 1 4 
+    12 4 12 4
+    8 4 8 4
+    6 4 6 4
 ]; 
 
-
-
 % Plot all runs together
-[leg_hangles, leg_entries] = plot_runs_comparison(results, runs, 'f1_053'); %Plot our data
-[truth_handles, truth_leg_entries] = plot_ohlins(settings); %plot ohlins
+[leg_handles, leg_entries] = plot_runs_comparison(results, runs, 'f1_053', true); % Plot our data
+[truth_handles, truth_leg_entries] = plot_ohlins(settings); % Plot ohlins
 
+% Combine legends
+all_handles = [leg_handles, truth_handles'];
+all_entries = [leg_entries, truth_leg_entries'];
+legend(all_handles, all_entries, 'Location', 'best');
+xlim([0 5.1])
+ylim([0 140])
 
 %% plotting functions
 
 function [truth_handles, legend_entries] = plot_ohlins(settings)
-    piston_vel = linspace(-5,5,200); % [in/s]
+    piston_vel = linspace(0,5,200); % [in/s]
     hold on
     colors = lines(size(settings,1));
     legend_entries = cell(size(settings,1),1);
@@ -49,83 +54,111 @@ function [truth_handles, legend_entries] = plot_ohlins(settings)
         end
         
         % Plot and store handle
-        truth_handles(k) = plot(piston_vel, damping_force, 'LineWidth', 1.5, 'Color', colors(k,:));
+        truth_handles(k) = plot(piston_vel, damping_force, '--', 'LineWidth', 1.2, 'Color', colors(k,:)*0.6);
         
-        % Legend entry
-        legend_entries{k} = sprintf('C[%d,%d], R[%d,%d]', ...
-                                    comp_low, comp_high, reb_low, reb_high);
+        % Legend entry - Ohlins reference
+        legend_entries{k} = sprintf('Ohlins: [%d %d | %d %d]', ...
+                                    comp_low, reb_low, 4-reb_high, 4-comp_high);
     end
 end
 
-function [h_legend, legend_str] = plot_runs_comparison(results, runs, lissajous_freq)
+function [h_legend, legend_str] = plot_runs_comparison(results, runs, lissajous_freq, positive_only)
     % Inputs:
     %   results        - Results structure containing run data
     %   runs           - Vector of run numbers to plot (e.g., [1, 2, 3])
     %   lissajous_freq - Frequency field name (e.g., 'f0_211', 'f1_053')
+    %   positive_only  - Boolean to plot only positive velocities (default: false)
+    
+    % Handle optional argument
+    if nargin < 4
+        positive_only = false;
+    end
     
     % Colors & markers
     colors  = lines(length(runs));
     markers = {'o','s','d','^','v','>','<','p','h'};   % cycle markers
-
+    
     figure('Name', 'Force-Velocity Comparison | Multiple Runs');
     hold on; grid off;
-
+    
     h_legend = [];
     legend_str = {};
-
+    
     for r = 1:length(runs)
         runNum = runs(r);
         rf = sprintf("r%d", runNum);
-
+        
         if ~isfield(results, rf)
             warning("Run %d not found in results, skipping", runNum);
             continue;
         end
-
+        
         run_data = results.(rf);
         color     = colors(r,:);
         marker    = markers{ mod(r-1, numel(markers)) + 1 };
-
+        
         % Check frequency
         if ~isfield(run_data, lissajous_freq)
             warning("Frequency %s not found for run %d, skipping", lissajous_freq, runNum);
             continue;
         end
-
+        
         d_liss = run_data.(lissajous_freq);
-
-        % --- Plot FV_all mean and uncertainty as shaded band ---
-        fill_shaded(d_liss.FV_all.velocity, d_liss.FV_all.mean, d_liss.FV_all.unc, color);
-
+        
+        % Find force offset at velocity = 0
+        vel = d_liss.FV_all.velocity;
+        mean_force = d_liss.FV_all.mean;
+        unc = d_liss.FV_all.unc;
+        
+        % Interpolate to find force at vel = 0
+        force_at_zero = interp1(vel, mean_force, 0, 'linear', 0);
+        
+        % Apply offset
+        mean_force_offset = mean_force - force_at_zero;
+        
+        % Plot FV_all mean and uncertainty as shaded band
+        if positive_only
+            mask = vel >= 0;
+            vel_plot = vel(mask);
+            mean_plot = mean_force_offset(mask);
+            unc_plot = unc(mask);
+        else
+            vel_plot = vel;
+            mean_plot = mean_force_offset;
+            unc_plot = unc;
+        end
+        
+        fill_shaded(vel_plot, mean_plot, unc_plot, color, false);
+        
         % Solid mean line
-        h_liss = plot(d_liss.FV_all.velocity, d_liss.FV_all.mean, ...
-                      'Color', color, 'LineWidth', 1.2);
-
+        h_liss = plot(vel_plot, mean_plot, 'Color', color, 'LineWidth', 1.2);
+        
         if r == 1
             h_lissajous = h_liss;
         end
-
-        % --- Extrema Error Bars (Better styling) ---
+        
+        % Extrema Error Bars
         all_fields = fieldnames(run_data);
         freq_fields = all_fields(startsWith(all_fields, 'f'));
-
+        
         for f = 1:length(freq_fields)
             freq = freq_fields{f};
             d = run_data.(freq);
             mv = d.maxV;
-
-            % POS
-            h_err = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
-                    'LineStyle','none', ...          % no connecting line
-                    'Marker', marker, ...
-                    'MarkerFaceColor', color, ...
-                    'MarkerEdgeColor', 'k', ...
-                    'Color', color * 0.5, ...        % slightly darker error bar
-                    'LineWidth', 1, ...
-                    'CapSize', 0);                   % remove caps
-
-            % NEG
-            errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
+            
+            % POS (apply offset)
+            h_err = errorbar(mv.pos.vmax, mv.pos.mean_force - force_at_zero, mv.pos.unc_force, ...
+                'LineStyle','none', ...          % no connecting line
+                'Marker', marker, ...
+                'MarkerFaceColor', color, ...
+                'MarkerEdgeColor', 'k', ...
+                'Color', color * 0.5, ...        % slightly darker error bar
+                'LineWidth', 1, ...
+                'CapSize', 0);                   % remove caps
+            
+            % NEG (only plot if not positive_only, apply offset)
+            if ~positive_only
+                errorbar(mv.neg.vmax, mv.neg.mean_force - force_at_zero, mv.neg.unc_force, ...
                     'LineStyle','none', ...
                     'Marker', marker, ...
                     'MarkerFaceColor', color, ...
@@ -133,49 +166,52 @@ function [h_legend, legend_str] = plot_runs_comparison(results, runs, lissajous_
                     'Color', color * 0.5, ...
                     'LineWidth', 1, ...
                     'CapSize', 0);
-
+            end
+            
             if r == 1 && f == 1
                 h_data = h_err;
             end
         end
-
-        % Add legend element
+        
+        % Add legend element - Data with labels
         valve = run_data.valving;
-        valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
-                            valve.hsc, valve.hsr, valve.lsc, valve.lsr);
-
+        valve_str = sprintf('Experimental [%.1f %.1f | %.1f  %.1f]', ...
+                            valve.lsc, valve.lsr, valve.hsc, valve.hsr);
         h_legend(end+1) = plot(NaN, NaN, 'Color', color, ...
-                               'LineWidth', 1.6, 'Marker', marker, ...
-                               'MarkerFaceColor', color, 'MarkerEdgeColor','k');
-
+            'LineWidth', 1.6, 'Marker', marker, ...
+            'MarkerFaceColor', color, 'MarkerEdgeColor','k');
         legend_str{end+1} = valve_str;
     end
-
-    % Zero reference axes
-    plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
-    plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
-
+    
     % Aesthetics
     set(gca, 'FontName', 'Times New Roman');
-
     xlabel('\bfVelocity\rm [\itin/s\rm]');
     ylabel('\bfForce\rm [\itlbf\rm]');
-
-
 end
 
 
 %% Helper function to format frequency names
 
-function fill_shaded(x, y_mean, y_unc, facecolor)
-
+function fill_shaded(x, y_mean, y_unc, facecolor, positive_only)
+    % Handle optional argument
+    if nargin < 5
+        positive_only = false;
+    end
+    
     x = x(:);
     y_mean = y_mean(:);
     y_unc  = y_unc(:);
-
+    
+    % Filter for positive velocities only if requested
+    if positive_only
+        mask = x >= 0;
+        x = x(mask);
+        y_mean = y_mean(mask);
+        y_unc = y_unc(mask);
+    end
+    
     y_upper = y_mean + y_unc;
     y_lower = y_mean - y_unc;
-
     fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
          facecolor, 'FaceAlpha', 0.23, 'EdgeColor', 'none');
 end
