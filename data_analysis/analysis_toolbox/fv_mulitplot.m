@@ -10,8 +10,8 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 
 
 % Specify runs to plot
-runs = [71, 72, 73, 74, 76, 77, 78];
-%runs = [10, 26, 42, 81];
+runs = [71, 76, 77, 78]; % LS sweep
+%runs = [14, 30, 46, 78]; % HS sweep
 %runs = [1,2,5,6];
 
 
@@ -103,33 +103,33 @@ function plot_runs_comparison(results, runs, lissajous_freq)
             end
         end
 
-        % --- Polynomial Fit (fixed ranges) ---
-        if isfield(d_liss, 'FV_fit')
-            % Positive fit: evaluate only on positive velocities
-            if isfield(d_liss.FV_fit, 'pos') && ~isempty(d_liss.FV_fit.pos.coeffs)
-                v_pos_all = d_liss.FV.pos.velocity(:);
-                v_pos = v_pos_all(v_pos_all > 0);
-                if ~isempty(v_pos)
-                    v_fit_pos = linspace(min(v_pos), max(v_pos), 400)';
-                    f_fit_pos = polyval(d_liss.FV_fit.pos.coeffs, v_fit_pos);
-                    h_poly = plot(v_fit_pos, f_fit_pos, '--', 'Color', color, 'LineWidth', 1.7);
-                    if r == 1
-                        h_fit = h_poly;
-                    end
-                end
-            end
-
-            % Negative fit: evaluate only on negative velocities
-            if isfield(d_liss.FV_fit, 'neg') && ~isempty(d_liss.FV_fit.neg.coeffs)
-                v_neg_all = d_liss.FV.neg.velocity(:);
-                v_neg = v_neg_all(v_neg_all < 0);
-                if ~isempty(v_neg)
-                    v_fit_neg = linspace(min(v_neg), max(v_neg), 400)'; % min is most negative
-                    f_fit_neg = polyval(d_liss.FV_fit.neg.coeffs, v_fit_neg);
-                    plot(v_fit_neg, f_fit_neg, '--', 'Color', color, 'LineWidth', 1.7);
-                end
-            end
-        end
+        % % --- Polynomial Fit (fixed ranges) ---
+        % if isfield(d_liss, 'FV_fit')
+        %     % Positive fit: evaluate only on positive velocities
+        %     if isfield(d_liss.FV_fit, 'pos') && ~isempty(d_liss.FV_fit.pos.coeffs)
+        %         v_pos_all = d_liss.FV.pos.velocity(:);
+        %         v_pos = v_pos_all(v_pos_all > 0);
+        %         if ~isempty(v_pos)
+        %             v_fit_pos = linspace(min(v_pos), max(v_pos), 400)';
+        %             f_fit_pos = polyval(d_liss.FV_fit.pos.coeffs, v_fit_pos);
+        %             h_poly = plot(v_fit_pos, f_fit_pos, '--', 'Color', color, 'LineWidth', 1.7);
+        %             if r == 1
+        %                 h_fit = h_poly;
+        %             end
+        %         end
+        %     end
+        % 
+        %     % Negative fit: evaluate only on negative velocities
+        %     if isfield(d_liss.FV_fit, 'neg') && ~isempty(d_liss.FV_fit.neg.coeffs)
+        %         v_neg_all = d_liss.FV.neg.velocity(:);
+        %         v_neg = v_neg_all(v_neg_all < 0);
+        %         if ~isempty(v_neg)
+        %             v_fit_neg = linspace(min(v_neg), max(v_neg), 400)'; % min is most negative
+        %             f_fit_neg = polyval(d_liss.FV_fit.neg.coeffs, v_fit_neg);
+        %             plot(v_fit_neg, f_fit_neg, '--', 'Color', color, 'LineWidth', 1.7);
+        %         end
+        %     end
+        % end
 
         % Add legend element
         valve = run_data.valving;
@@ -161,7 +161,6 @@ function plot_runs_comparison(results, runs, lissajous_freq)
     legend_elements = [h_liss_generic, h_data_generic, h_fit_generic, h_legend];
     legend_labels   = [{sprintf('%s Lissajous', format_freq_name(lissajous_freq))}, ...
                        {'Velocity Extrema Sample'}, ...
-                       {'Polynomial Fit'}, ...
                        legend_str];
 
     leg = legend(legend_elements, legend_labels, 'Location','best', 'FontSize',9);

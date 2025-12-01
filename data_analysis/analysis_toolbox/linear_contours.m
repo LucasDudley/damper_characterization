@@ -1,19 +1,25 @@
 clear, clc, close all
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
+
 %% PLOTTING PARAMETERS 
-GRID_RESOLUTION = 20;         % Number of points for interpolation grid
-CONTOUR_LEVELS = 20;          % Number of contour levels 
+GRID_RESOLUTION = 25;         % Number of points for interpolation grid
+CONTOUR_LEVELS = 25;          % Number of contour levels 
 INTERP_METHOD = 'linear';      
 SHOW_GRID = false;            
-MARKER_SIZE = 50;             
+MARKER_SIZE = 45;             
 UNIT_LABEL = ' \mathrm{[lbf/(in/s)]}'; 
 
 % Load results data
+EXCLUDE_RUNS = {'r1', 'r2', 'r5', 'r6'};
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
+
 %% Extract Data
 run_fields = fieldnames(results);
 run_fields = run_fields(~cellfun(@isempty, regexp(run_fields, "^r\d+$")));
+
+% Filter out excluded runs
+run_fields = run_fields(~ismember(run_fields, EXCLUDE_RUNS));
 
 % Initialize storage arrays
 num_runs = numel(run_fields);
@@ -30,6 +36,7 @@ C_LS_neg = zeros(num_runs, 1);
 C_HS_neg = zeros(num_runs, 1);
 R2_pos = zeros(num_runs, 1); % R-squared for compression
 R2_neg = zeros(num_runs, 1); % R-squared for rebound
+
 for i = 1:num_runs
     rf = run_fields{i};
     run_names{i} = rf; % Store the run name
@@ -178,10 +185,10 @@ for i = 1:length(h)
 end
 
 % Add centered text labels for Compression and Rebound
-annotation('textbox', [0.35, 0.94, 0.3, 0.05], 'String', 'Compression Damping', ...
+annotation('textbox', [0.35, 0.94, 0.3, 0.05], 'String', 'Compression Damping Coefficient', ...
     'FontName', 'Times New Roman', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'EdgeColor', 'none');
-annotation('textbox', [0.35, 0.48, 0.3, 0.05], 'String', 'Rebound Damping', ...
+annotation('textbox', [0.35, 0.48, 0.3, 0.05], 'String', 'Rebound Damping Coefficient', ...
     'FontName', 'Times New Roman', 'FontSize', 14, 'FontWeight', 'bold', ...
     'HorizontalAlignment', 'center', 'EdgeColor', 'none');
 

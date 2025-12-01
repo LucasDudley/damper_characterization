@@ -3,7 +3,6 @@
 % Force-Velocity (FV) plot for different temperature conditions.
 
 clear, clc
-% Set figure graphics theme to 'light' (optional, relies on settings structure)
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue = 'light';
 
@@ -70,10 +69,6 @@ function plot_temperature_investigation(results, test_data, cold_runs, hot_runs,
                        'Temperature [°F]', ...
                        'Valve Settings [clicks]'), ...
           'FontWeight', 'bold', 'FontName', 'Times New Roman');
-    
-    % Add subtle grid
-    grid on;
-    set(gca, 'GridAlpha', 0.15, 'GridLineStyle', ':');
     
     hold off;
 end
