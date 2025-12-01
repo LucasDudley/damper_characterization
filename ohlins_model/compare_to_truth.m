@@ -2,26 +2,62 @@ clear, clc, close all
 
 % Load out test data
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
+addpath('D:\AME441_Code\damper_characterization\ohlins_model')
 
-runNums = [10];
-freqField = 'f1_053';
 
-plot_multi_runs(results, runNums, freqField)
-
-%% Plot multiple runs on single figure
-
+%% Plot comparison
+piston_vel = linspace(-5,5,200);
 
 % Specify runs to plot
-runs = [71, 76, 77, 78]; % our data to plot
-lissajous_freq = 'f1_053'; 
+runs = [106]; % our data to plot
+
+% [LSC, HSC, LSR, HSR] settings for ohlins data
+settings = [
+    1 4 1 4 
+]; 
+
 
 
 % Plot all runs together
-plot_runs_comparison(results, runs, lissajous_freq);
+[leg_hangles, leg_entries] = plot_runs_comparison(results, runs, 'f1_053'); %Plot our data
+[truth_handles, truth_leg_entries] = plot_ohlins(settings); %plot ohlins
 
-%% Function to plot multiple runs on one figure
 
-function plot_runs_comparison(results, runs, lissajous_freq)
+%% plotting functions
+
+function [truth_handles, legend_entries] = plot_ohlins(settings)
+    piston_vel = linspace(-5,5,200); % [in/s]
+    hold on
+    colors = lines(size(settings,1));
+    legend_entries = cell(size(settings,1),1);
+    truth_handles = zeros(size(settings,1),1); % Preallocate handles array
+    
+    for k = 1:size(settings,1)
+        comp_low  = settings(k,1);
+        comp_high = settings(k,2);
+        reb_low   = settings(k,3);
+        reb_high  = settings(k,4);
+        
+        % Preallocate
+        damping_force = zeros(size(piston_vel));
+        
+        % Evaluate damper model for each velocity (scalar input)
+        for j = 1:length(piston_vel)
+            damping_force(j) = ohlins_damper_model(comp_low, comp_high, ...
+                                                   reb_low, reb_high, ...
+                                                   piston_vel(j));
+        end
+        
+        % Plot and store handle
+        truth_handles(k) = plot(piston_vel, damping_force, 'LineWidth', 1.5, 'Color', colors(k,:));
+        
+        % Legend entry
+        legend_entries{k} = sprintf('C[%d,%d], R[%d,%d]', ...
+                                    comp_low, comp_high, reb_low, reb_high);
+    end
+end
+
+function [h_legend, legend_str] = plot_runs_comparison(results, runs, lissajous_freq)
     % Inputs:
     %   results        - Results structure containing run data
     %   runs           - Vector of run numbers to plot (e.g., [1, 2, 3])
@@ -115,7 +151,7 @@ function plot_runs_comparison(results, runs, lissajous_freq)
         legend_str{end+1} = valve_str;
     end
 
-    % --- Zero reference axes ---
+    % Zero reference axes
     plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
     plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
 
@@ -125,8 +161,6 @@ function plot_runs_comparison(results, runs, lissajous_freq)
     xlabel('\bfVelocity\rm [\itin/s\rm]');
     ylabel('\bfForce\rm [\itlbf\rm]');
 
-    leg = legend(h_legend, legend_str, 'Location','best', 'FontSize',9);
-    title(leg,'Valve Settings','FontWeight','bold','FontName','Times New Roman');
 
 end
 

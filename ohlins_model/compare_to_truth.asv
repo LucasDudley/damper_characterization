@@ -2,116 +2,180 @@ clear, clc, close all
 
 % Load out test data
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
-
-runNums = [10];
-freqField = 'f1_053';
-
-plot_multi_runs(results, runNums, freqField)
-
-%% helpers
-%% plot checks
-close all
-%f0_211, f0_421, f0_632, f0_842, f1_053
-
-test = 40;
-freq = "f1_053";
-
-% plot test_data
-plot_raw(test_data, test, freq);
-
-% plot results
-plot_data(results, test, freq);
+addpath('D:\AME441_Code\damper_characterization\ohlins_model')
 
 
-%% quick plot helpers
+%% Plot comparison
+piston_vel = linspace(-5,5,200);
 
-function plot_data(results, runNum, freqField)
-    % Access run
-    rf = sprintf("r%d", runNum);
-    if ~isfield(results, rf)
-        error("Run %d not found in results", runNum);
-    end
-    if ~isfield(results.(rf), freqField)
-        error("Frequency field %s not found for run %d", freqField, runNum);
-    end
-    d = results.(rf).(freqField);
-    valve = results.(rf).valving;
-    valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
-                        valve.hsc, valve.hsr, valve.lsc, valve.lsr);
+% Specify runs to plot
+runs = [106]; % our data to plot MAX LS (62, 70, 78, 86
+
+
+settings = [
+    1 4 1 4
+]; 
+
+
+
+% Plot all runs together
+[leg_hangles, leg_entries] = plot_runs_comparison(results, runs, 'f1_053'); %Plot our data
+[truth_handles, truth_leg_entries] = plot_ohlins(settings); %plot ohlins
+
+
+%% plotting functions
+
+function [truth_handles, legend_entries] = plot_ohlins(settings)
+    piston_vel = linspace(-5,5,200); % [in/s]
+    hold on
+    colors = lines(size(settings,1));
+    legend_entries = cell(size(settings,1),1);
+    truth_handles = zeros(size(settings,1),1); % Preallocate handles array
     
-    figure('Name', sprintf('Run %d | %s | Force-Velocity', runNum, freqField));
-    hold on; grid on;
-    
-    % Force–Velocity accel
-    fill_shaded(d.FV.pos.velocity, d.FV.pos.mean, d.FV.pos.unc, [0 0.447 0.741]);
-    h3 = plot(d.FV.pos.velocity, d.FV.pos.mean, 'Color', [0 0.447 0.741], 'LineWidth', 1.4);
-    % Force–Velocity decel
-    fill_shaded(d.FV.neg.velocity, d.FV.neg.mean, d.FV.neg.unc, [0.850 0.325 0.098]);
-    h4 = plot(d.FV.neg.velocity, d.FV.neg.mean, 'Color', [0.850 0.325 0.098], 'LineWidth', 1.4);
-    % Force–Velocity all
-    fill_shaded(d.FV_all.velocity, d.FV_all.mean, d.FV_all.unc, [0.466 0.674 0.188]);
-    h7 = plot(d.FV_all.velocity, d.FV_all.mean, 'Color', [0.466 0.674 0.188], 'LineWidth', 1.4);
-    
-    % --- Polynomial fits (Existing logic) ---
-    h_poly = [];
-    if isfield(d, 'FV_fit')
-        % Positive polynomial fit → only for v > 0
-        if isfield(d.FV_fit, 'pos') && ~isempty(d.FV_fit.pos.coeffs)
-            v = d.FV_all.velocity(:);
-            mask_pos = v > 0;
-            if any(mask_pos)
-                v_fit_pos = linspace(min(v(mask_pos)), max(v(mask_pos)), 400)';
-                f_fit_pos = polyval(d.FV_fit.pos.coeffs, v_fit_pos);
-                h_poly(1) = plot(v_fit_pos, f_fit_pos, '--', 'Color', [0 0.2 0.4], 'LineWidth', 2);
-            end
+    for k = 1:size(settings,1)
+        comp_low  = settings(k,1);
+        comp_high = settings(k,2);
+        reb_low   = settings(k,3);
+        reb_high  = settings(k,4);
+        
+        % Preallocate
+        damping_force = zeros(size(piston_vel));
+        
+        % Evaluate damper model for each velocity (scalar input)
+        for j = 1:length(piston_vel)
+            damping_force(j) = ohlins_damper_model(comp_low, comp_high, ...
+                                                   reb_low, reb_high, ...
+                                                   piston_vel(j));
         end
-        % Negative polynomial fit → only for v < 0
-        if isfield(d.FV_fit, 'neg') && ~isempty(d.FV_fit.neg.coeffs)
-            v = d.FV_all.velocity(:);
-            mask_neg = v < 0;
-            if any(mask_neg)
-                v_fit_neg = linspace(min(v(mask_neg)), max(v(mask_neg)), 400)';
-                f_fit_neg = polyval(d.FV_fit.neg.coeffs, v_fit_neg);
-                h_poly(2) = plot(v_fit_neg, f_fit_neg, '--', 'Color', [0.5 0.1 0], 'LineWidth', 2);
-            end
-        end
+        
+        % Plot and store handle
+        truth_handles(k) = plot(piston_vel, damping_force, 'LineWidth', 1.5, 'Color', colors(k,:));
+        
+        % Legend entry
+        legend_entries{k} = sprintf('C[%d,%d], R[%d,%d]', ...
+                                    comp_low, comp_high, reb_low, reb_high);
     end
-    
-    % Max Velocity Force points
-    mv = d.maxV;
-    h5 = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
-        'r.', 'MarkerSize', 20, 'LineWidth', 1.8);
-    h6 = errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
-        'b.', 'MarkerSize', 20, 'LineWidth', 1.8);
-    
-    xlabel("Velocity (in/s)");
-    ylabel("Force (N)");
-    title({sprintf("Run %d | %s | Force–Velocity", runNum, freqField), valve_str}, ...
-          "Interpreter", "none");
-    
-    %  Update Legend 
-    h_all = [h3, h4, h7, h_poly, h_pw, h5, h6];
-    legend_str = ["Accel", "Decel", "Mean-All", "Poly-Fit-Pos", "Poly-Fit-Neg", "PW-Fit-Pos", "PW-Fit-Neg", "+Vmax", "-Vmax"];
-
-    % Filter the legend handles and strings to only include those that were plotted
-    valid_h = h_all(ishandle(h_all));
-    valid_str = legend_str(ishandle(h_all));
-    
-    legend(valid_h, valid_str, 'Location', 'best');
 end
+
+function [h_legend, legend_str] = plot_runs_comparison(results, runs, lissajous_freq)
+    % Inputs:
+    %   results        - Results structure containing run data
+    %   runs           - Vector of run numbers to plot (e.g., [1, 2, 3])
+    %   lissajous_freq - Frequency field name (e.g., 'f0_211', 'f1_053')
+    
+    % Colors & markers
+    colors  = lines(length(runs));
+    markers = {'o','s','d','^','v','>','<','p','h'};   % cycle markers
+
+    figure('Name', 'Force-Velocity Comparison | Multiple Runs');
+    hold on; grid off;
+
+    h_legend = [];
+    legend_str = {};
+
+    for r = 1:length(runs)
+        runNum = runs(r);
+        rf = sprintf("r%d", runNum);
+
+        if ~isfield(results, rf)
+            warning("Run %d not found in results, skipping", runNum);
+            continue;
+        end
+
+        run_data = results.(rf);
+        color     = colors(r,:);
+        marker    = markers{ mod(r-1, numel(markers)) + 1 };
+
+        % Check frequency
+        if ~isfield(run_data, lissajous_freq)
+            warning("Frequency %s not found for run %d, skipping", lissajous_freq, runNum);
+            continue;
+        end
+
+        d_liss = run_data.(lissajous_freq);
+
+        % --- Plot FV_all mean and uncertainty as shaded band ---
+        fill_shaded(d_liss.FV_all.velocity, d_liss.FV_all.mean, d_liss.FV_all.unc, color);
+
+        % Solid mean line
+        h_liss = plot(d_liss.FV_all.velocity, d_liss.FV_all.mean, ...
+                      'Color', color, 'LineWidth', 1.2);
+
+        if r == 1
+            h_lissajous = h_liss;
+        end
+
+        % --- Extrema Error Bars (Better styling) ---
+        all_fields = fieldnames(run_data);
+        freq_fields = all_fields(startsWith(all_fields, 'f'));
+
+        for f = 1:length(freq_fields)
+            freq = freq_fields{f};
+            d = run_data.(freq);
+            mv = d.maxV;
+
+            % POS
+            h_err = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
+                    'LineStyle','none', ...          % no connecting line
+                    'Marker', marker, ...
+                    'MarkerFaceColor', color, ...
+                    'MarkerEdgeColor', 'k', ...
+                    'Color', color * 0.5, ...        % slightly darker error bar
+                    'LineWidth', 1, ...
+                    'CapSize', 0);                   % remove caps
+
+            % NEG
+            errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
+                    'LineStyle','none', ...
+                    'Marker', marker, ...
+                    'MarkerFaceColor', color, ...
+                    'MarkerEdgeColor', 'k', ...
+                    'Color', color * 0.5, ...
+                    'LineWidth', 1, ...
+                    'CapSize', 0);
+
+            if r == 1 && f == 1
+                h_data = h_err;
+            end
+        end
+
+        % Add legend element
+        valve = run_data.valving;
+        valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
+                            valve.hsc, valve.hsr, valve.lsc, valve.lsr);
+
+        h_legend(end+1) = plot(NaN, NaN, 'Color', color, ...
+                               'LineWidth', 1.6, 'Marker', marker, ...
+                               'MarkerFaceColor', color, 'MarkerEdgeColor','k');
+
+        legend_str{end+1} = valve_str;
+    end
+
+    % Zero reference axes
+    plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+    plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
+
+    % Aesthetics
+    set(gca, 'FontName', 'Times New Roman');
+
+    xlabel('\bfVelocity\rm [\itin/s\rm]');
+    ylabel('\bfForce\rm [\itlbf\rm]');
+
+
+end
+
+
+%% Helper function to format frequency names
 
 function fill_shaded(x, y_mean, y_unc, facecolor)
 
-    % Creates a filled band using mean ± uncertainty
     x = x(:);
     y_mean = y_mean(:);
     y_unc  = y_unc(:);
 
-    % Upper and lower bounds
     y_upper = y_mean + y_unc;
     y_lower = y_mean - y_unc;
 
     fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
-         facecolor, 'FaceAlpha', 0.25, 'EdgeColor', 'none');
+         facecolor, 'FaceAlpha', 0.23, 'EdgeColor', 'none');
 end
-

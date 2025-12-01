@@ -9,7 +9,7 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 close all
 %f0_211, f0_421, f0_632, f0_842, f1_053
 
-test = 40;
+test = 86;
 freq = "f1_053";
 
 % plot test_data
