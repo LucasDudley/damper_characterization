@@ -9,7 +9,7 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 close all
 %f0_211, f0_421, f0_632, f0_842, f1_053
 
-test = 4;
+test = 40;
 freq = "f1_053";
 
 % plot test_data
@@ -175,7 +175,7 @@ function plot_processed(results, runNum, freqField)
             v_plot_pos = linspace(0, v_max_pos, 400)';
             % Calculate force using absolute velocity
             f_pw_pos = calculate_pw_force(abs(v_plot_pos), params);
-            h_pw(1) = plot(v_plot_pos, f_pw_pos, '-.', 'Color', [0 0.8 0], 'LineWidth', 2);
+            h_pw(1) = plot(v_plot_pos, f_pw_pos, '-.', 'Color', 'r', 'LineWidth', 2);
         end
 
         % Rebound (Negative Velocity) PW Fit
@@ -186,7 +186,7 @@ function plot_processed(results, runNum, freqField)
             v_plot_neg = linspace(v_min_neg, 0, 400)';
             % Calculate force using absolute velocity
             f_pw_neg = calculate_pw_force(abs(v_plot_neg), params);
-            h_pw(2) = plot(v_plot_neg, f_pw_neg, '-.', 'Color', [0.8 0 0.8], 'LineWidth', 2);
+            h_pw(2) = plot(v_plot_neg, f_pw_neg, '-.', 'Color', 'b', 'LineWidth', 2);
         end
     end
     

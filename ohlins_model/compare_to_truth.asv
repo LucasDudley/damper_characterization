@@ -1,0 +1,117 @@
+clear, clc, close all
+
+% Load out test data
+load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
+
+runNums = [10];
+freqField = 'f1_053';
+
+plot_multi_runs(results, runNums, freqField)
+
+%% helpers
+%% plot checks
+close all
+%f0_211, f0_421, f0_632, f0_842, f1_053
+
+test = 40;
+freq = "f1_053";
+
+% plot test_data
+plot_raw(test_data, test, freq);
+
+% plot results
+plot_data(results, test, freq);
+
+
+%% quick plot helpers
+
+function plot_data(results, runNum, freqField)
+    % Access run
+    rf = sprintf("r%d", runNum);
+    if ~isfield(results, rf)
+        error("Run %d not found in results", runNum);
+    end
+    if ~isfield(results.(rf), freqField)
+        error("Frequency field %s not found for run %d", freqField, runNum);
+    end
+    d = results.(rf).(freqField);
+    valve = results.(rf).valving;
+    valve_str = sprintf("HSC %.1f | HSR %.1f | LSC %.1f | LSR %.1f", ...
+                        valve.hsc, valve.hsr, valve.lsc, valve.lsr);
+    
+    figure('Name', sprintf('Run %d | %s | Force-Velocity', runNum, freqField));
+    hold on; grid on;
+    
+    % Force–Velocity accel
+    fill_shaded(d.FV.pos.velocity, d.FV.pos.mean, d.FV.pos.unc, [0 0.447 0.741]);
+    h3 = plot(d.FV.pos.velocity, d.FV.pos.mean, 'Color', [0 0.447 0.741], 'LineWidth', 1.4);
+    % Force–Velocity decel
+    fill_shaded(d.FV.neg.velocity, d.FV.neg.mean, d.FV.neg.unc, [0.850 0.325 0.098]);
+    h4 = plot(d.FV.neg.velocity, d.FV.neg.mean, 'Color', [0.850 0.325 0.098], 'LineWidth', 1.4);
+    % Force–Velocity all
+    fill_shaded(d.FV_all.velocity, d.FV_all.mean, d.FV_all.unc, [0.466 0.674 0.188]);
+    h7 = plot(d.FV_all.velocity, d.FV_all.mean, 'Color', [0.466 0.674 0.188], 'LineWidth', 1.4);
+    
+    % --- Polynomial fits (Existing logic) ---
+    h_poly = [];
+    if isfield(d, 'FV_fit')
+        % Positive polynomial fit → only for v > 0
+        if isfield(d.FV_fit, 'pos') && ~isempty(d.FV_fit.pos.coeffs)
+            v = d.FV_all.velocity(:);
+            mask_pos = v > 0;
+            if any(mask_pos)
+                v_fit_pos = linspace(min(v(mask_pos)), max(v(mask_pos)), 400)';
+                f_fit_pos = polyval(d.FV_fit.pos.coeffs, v_fit_pos);
+                h_poly(1) = plot(v_fit_pos, f_fit_pos, '--', 'Color', [0 0.2 0.4], 'LineWidth', 2);
+            end
+        end
+        % Negative polynomial fit → only for v < 0
+        if isfield(d.FV_fit, 'neg') && ~isempty(d.FV_fit.neg.coeffs)
+            v = d.FV_all.velocity(:);
+            mask_neg = v < 0;
+            if any(mask_neg)
+                v_fit_neg = linspace(min(v(mask_neg)), max(v(mask_neg)), 400)';
+                f_fit_neg = polyval(d.FV_fit.neg.coeffs, v_fit_neg);
+                h_poly(2) = plot(v_fit_neg, f_fit_neg, '--', 'Color', [0.5 0.1 0], 'LineWidth', 2);
+            end
+        end
+    end
+    
+    % Max Velocity Force points
+    mv = d.maxV;
+    h5 = errorbar(mv.pos.vmax, mv.pos.mean_force, mv.pos.unc_force, ...
+        'r.', 'MarkerSize', 20, 'LineWidth', 1.8);
+    h6 = errorbar(mv.neg.vmax, mv.neg.mean_force, mv.neg.unc_force, ...
+        'b.', 'MarkerSize', 20, 'LineWidth', 1.8);
+    
+    xlabel("Velocity (in/s)");
+    ylabel("Force (N)");
+    title({sprintf("Run %d | %s | Force–Velocity", runNum, freqField), valve_str}, ...
+          "Interpreter", "none");
+    
+    %  Update Legend 
+    h_all = [h3, h4, h7, h_poly, h_pw, h5, h6];
+    legend_str = ["Accel", "Decel", "Mean-All", "Poly-Fit-Pos", "Poly-Fit-Neg", "PW-Fit-Pos", "PW-Fit-Neg", "+Vmax", "-Vmax"];
+
+    % Filter the legend handles and strings to only include those that were plotted
+    valid_h = h_all(ishandle(h_all));
+    valid_str = legend_str(ishandle(h_all));
+    
+    legend(valid_h, valid_str, 'Location', 'best');
+end
+
+function fill_shaded(x, y_mean, y_unc, facecolor)
+
+    % Creates a filled band using mean ± uncertainty
+    x = x(:);
+    y_mean = y_mean(:);
+    y_unc  = y_unc(:);
+
+    % Upper and lower bounds
+    y_upper = y_mean + y_unc;
+    y_lower = y_mean - y_unc;
+
+    fill([x; flipud(x)], [y_upper; flipud(y_lower)], ...
+         facecolor, 'FaceAlpha', 0.25, 'EdgeColor', 'none');
+end
+

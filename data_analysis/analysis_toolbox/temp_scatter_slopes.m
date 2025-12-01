@@ -7,7 +7,7 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 %% Define runs to analyze
 runs = [3, 4];
 lissajous_freq = 'f1_053';
-num_temp_bins = 15;
+num_temp_bins = 10;
 v_knee_fixed = 1;
 poly_order = 2;
 opp_vel_perc = 0.15;
@@ -175,6 +175,69 @@ hold off;
 
 % limits
 xlim([28 54])
+
+%% Percet Change
+C_LS_comp_norm = 100 * (C_LS_comp - C_LS_comp(1)) / C_LS_comp(1);
+C_HS_comp_norm = 100 * (C_HS_comp - C_HS_comp(1)) / C_HS_comp(1);
+C_LS_reb_norm  = 100 * (C_LS_reb  - C_LS_reb(1))  / C_LS_reb(1);
+C_HS_reb_norm  = 100 * (C_HS_reb  - C_HS_reb(1))  / C_HS_reb(1);
+
+% Normalize uncertainties the same way
+unc_LS_comp_norm = 100 * unc_LS_comp ./ C_LS_comp(1);
+unc_HS_comp_norm = 100 * unc_HS_comp ./ C_HS_comp(1);
+unc_LS_reb_norm  = 100 * unc_LS_reb  ./ C_LS_reb(1);
+unc_HS_reb_norm  = 100 * unc_HS_reb  ./ C_HS_reb(1);
+
+% X-uncertainty unchanged
+temp_unc = temp_uncertainty;
+
+figure(); hold on; grid off;
+blue_dark   = [0   76 153] / 255;   % LS comp
+blue_light  = [102 178 255] / 255;  % LS rebound
+orange_dark = [204 102 0] / 255;    % HS comp
+orange_light= [255 178 102] / 255;  % HS rebound
+
+% --- LS Compression (dark blue)
+errorbar(temp_centers, C_LS_comp_norm, unc_LS_comp_norm, unc_LS_comp_norm, ...
+         temp_unc, temp_unc, 'o', 'LineWidth', 1.3, ...
+         'MarkerSize', 8, 'MarkerFaceColor', blue_dark, ...
+         'MarkerEdgeColor', 'k', ...
+         'Color', blue_dark, 'CapSize', 6, ...
+         'DisplayName','Compression C_{LS}');
+
+% --- HS Compression (dark orange)
+errorbar(temp_centers, C_HS_comp_norm, unc_HS_comp_norm, unc_HS_comp_norm, ...
+         temp_unc, temp_unc, 'o', 'LineWidth', 1.3, ...
+         'MarkerSize', 8, 'MarkerFaceColor', orange_dark, ...
+         'MarkerEdgeColor', 'k', ...
+         'Color', orange_dark, 'CapSize', 6, ...
+         'DisplayName','Compression C_{HS}');
+
+% --- LS Rebound (light blue)
+errorbar(temp_centers, C_LS_reb_norm, unc_LS_reb_norm, unc_LS_reb_norm, ...
+         temp_unc, temp_unc, 'd', 'LineWidth', 1.3, ...
+         'MarkerSize', 8, 'MarkerFaceColor', blue_light, ...
+         'MarkerEdgeColor', 'k', ...
+         'Color', blue_light, 'CapSize', 6, ...
+         'DisplayName','Rebound C_{LS}');
+
+% --- HS Rebound (light orange)
+errorbar(temp_centers, C_HS_reb_norm, unc_HS_reb_norm, unc_HS_reb_norm, ...
+         temp_unc, temp_unc, 'd', 'LineWidth', 1.3, ...
+         'MarkerSize', 8, 'MarkerFaceColor', orange_light, ...
+         'MarkerEdgeColor', 'k', ...
+         'Color', orange_light, 'CapSize', 6, ...
+         'DisplayName','Rebound C_{HS}');
+
+set(gca,'FontName','Times New Roman','FontSize',11);
+xlabel('\bfTemperature\rm [\it°C\rm]', 'FontSize', 13);
+ylabel('\bf\DeltaC / C_{0}\rm [%]', 'FontSize', 13);
+
+legend('Location','southwest','FontSize',10,'FontName','Times New Roman');
+hold off;
+xlim([28 55])
+
+
 
 %% Helper Functions
 

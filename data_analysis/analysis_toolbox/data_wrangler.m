@@ -15,7 +15,7 @@ poly_order = 3;
 opp_vel_perc = 0.15; % percent of comp/rebound to consider in fit
 
 % Piecewise Linear Fit Settings 
-v_knee_fixed = 0.75;
+v_knee_fixed = 1;
 
 load(load_path, "test_data");
 run_fields = fieldnames(test_data); % Only keep "rX" (avoid run_guide)
