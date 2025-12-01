@@ -43,25 +43,22 @@ function plot_temperature_investigation(results, test_data, cold_runs, hot_runs,
     h_legend = [];
     legend_str = {};
     
-    % --- Plot COLD runs ---
     [h_legend, legend_str] = plot_run_group(cold_runs, cold_temps_mean, cold_temps_std, ...
                                             cold_color, markers, results, h_legend, legend_str, 0, lissajous_freq);
 
-    % --- Plot HOT runs ---
     [h_legend, legend_str] = plot_run_group(hot_runs, hot_temps_mean, hot_temps_std, ...
                                             hot_color, markers, results, h_legend, legend_str, length(cold_runs), lissajous_freq);
     
-    % --- Zero reference lines ---
     plot(xlim, [0 0], 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
     plot([0 0], ylim, 'k--', 'LineWidth', 0.8, 'HandleVisibility','off');
     
     
-    % --- Aesthetics and Labels ---
+    % Labels
     set(gca, 'FontName', 'Times New Roman', 'FontSize', 11);
     xlabel('\bfVelocity\rm [\itin/s\rm]', 'FontSize', 13);
     ylabel('\bfForce\rm [\itlbf\rm]', 'FontSize', 13);
     
-    % Legend with custom title
+    % Legend
     leg = legend(h_legend, legend_str, 'Location', 'best', ...
                  'FontSize', 9, 'FontName', 'Courier New');
     title(leg, sprintf('\\bf%s\\rm | %s | %s', ...
@@ -139,7 +136,7 @@ function [h_legend, legend_str] = plot_run_group(runs, run_temps_mean, run_temps
             end
         end
         
-        % --- Legend Entry ---
+        %Legend Entry
         valve = run_data.valving;
         temp_mean = run_temps_mean(r);
         temp_std = run_temps_std(r);

@@ -11,7 +11,7 @@ MARKER_SIZE = 45;
 UNIT_LABEL = ' \mathrm{[lbf/(in/s)]}'; 
 
 % Load results data
-EXCLUDE_RUNS = {'r1', 'r2', 'r5', 'r6'};
+EXCLUDE_RUNS = {'r1', 'r2', 'r3', 'r4', 'r5', 'r6'};
 load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles\valving_results_data.mat")
 
 %% Extract Data
