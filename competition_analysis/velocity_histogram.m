@@ -130,8 +130,8 @@ xline(mu_env+3*sigma_env,'b--','LineWidth',1.2, ...
 xline(mu_env-3*sigma_env,'b--','LineWidth',1.2,'HandleVisibility','off');
 
 % format
-ylabel('\bfWheel Velocity \rm[\itin/s\rm]', 'Color', 'k');
-xlabel('\bfPercentage \rm[\it%\rm]', 'Color', 'k');
+xlabel('\bfWheel Velocity \rm[\itin/s\rm]', 'Color', 'k');
+ylabel('\bfPercentage \rm[\it%\rm]', 'Color', 'k');
 ylim([0 max(h.Values)*1.2])
 yt = yticks; 
 yticklabels(yt*100)
