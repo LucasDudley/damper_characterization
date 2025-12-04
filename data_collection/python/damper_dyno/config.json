@@ -3,7 +3,7 @@
     "sample_rate": 800,
     "chunk_size": 200,
     "lpf_cutoff": 15,
-    "output_dir": "G:\\.shortcut-targets-by-id\\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\\Senior_Design\\Data Collection\\Raw Data",
+    "output_dir": "D:\\AME441_Code\\damper_characterization\\data_collection\\python\\damper_dyno\\results",
     "rpm_min": 0,
     "rpm_max": 1200,
     "duty_cycle_min": 0,
