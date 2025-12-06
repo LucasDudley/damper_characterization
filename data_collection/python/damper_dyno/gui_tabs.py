@@ -39,7 +39,7 @@ class RunTestTab(ttk.Frame):
             master=left_plot_frame, 
             signal_names=["Force"], 
             y_label="Force [N]", 
-            y_range=(-1000, 1000)
+            y_range=(-500, 500)
         )
         self.disp_plot = RealTimePlot(
             master=right_plot_frame,
