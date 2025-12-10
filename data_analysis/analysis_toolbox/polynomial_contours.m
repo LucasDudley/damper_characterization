@@ -1,10 +1,11 @@
 clear; clc; close all;
-%% PLOTTING PARAMETERS 
-GRID_RESOLUTION = 20;         
-CONTOUR_LEVELS = 15;          
-INTERP_METHOD = 'linear';      
-SHOW_GRID = false;            
-MARKER_SIZE = 50;             
+
+%% PLOTTING PARAMETERS
+GRID_RESOLUTION = 20;
+CONTOUR_LEVELS = 15;
+INTERP_METHOD = 'linear';
+SHOW_GRID = false;
+MARKER_SIZE = 50;
 FONT_NAME = 'Times New Roman';
 COLORBAR_LABEL_FONTSIZE = 12;
 
@@ -15,13 +16,16 @@ load("G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design
 run_fields = fieldnames(results);
 run_fields = run_fields(~cellfun(@isempty, regexp(run_fields, "^r\d+$")));
 num_runs = numel(run_fields);
+
 hsc_vals = zeros(num_runs, 1);
 hsr_vals = zeros(num_runs, 1);
 lsc_vals = zeros(num_runs, 1);
 lsr_vals = zeros(num_runs, 1);
+
 poly_order = 0;
 coeffs_pos = [];
 coeffs_neg = [];
+
 R2_pos = zeros(num_runs, 1);
 R2_neg = zeros(num_runs, 1);
 
@@ -31,13 +35,15 @@ for i = 1:num_runs
     hsr_vals(i) = results.(rf).valving.hsr;
     lsc_vals(i) = results.(rf).valving.lsc;
     lsr_vals(i) = results.(rf).valving.lsr;
+    
     if isfield(results.(rf), 'FV_fit_all') ...
-       && isempty(coeffs_pos) ...
-       && ~isempty(results.(rf).FV_fit_all.pos.coeffs)
+            && isempty(coeffs_pos) ...
+            && ~isempty(results.(rf).FV_fit_all.pos.coeffs)
         poly_order = length(results.(rf).FV_fit_all.pos.coeffs) - 1;
         coeffs_pos = NaN(num_runs, poly_order + 1);
         coeffs_neg = NaN(num_runs, poly_order + 1);
     end
+    
     if isfield(results.(rf), 'FV_fit_all')
         if ~isempty(results.(rf).FV_fit_all.pos.coeffs)
             coeffs_pos(i,:) = results.(rf).FV_fit_all.pos.coeffs;
@@ -49,77 +55,90 @@ for i = 1:num_runs
         end
     end
 end
+
 if poly_order < 3
-    warning("Polynomial order < 3. Cannot plot a1,a2,a3.");
+    warning("Polynomial order < 3. Cannot plot a1,a2,a3,a0.");
     return;
 end
 
-%% Build coefficient labels
-coeff_indices = [1 2 3];
-coeff_powers  = [poly_order, poly_order-1, poly_order-2];
-coeff_labels_full = cell(1, 3);
-coeff_labels_row = cell(1, 3);
+%% Build coefficient labels (now including a0)
+% Include a_n, a_{n-1}, a_{n-2}, and a_0
+coeff_indices = [1 2 3 poly_order+1];  % Indices for highest 3 terms + constant
+coeff_powers = [poly_order, poly_order-1, poly_order-2, 0];  % Powers
 
-for k = 1:3
-    % Coefficient term (e.g., a_n, a_{n-1}, a_{n-2})
+coeff_labels_full = cell(1, 4);
+coeff_labels_row = cell(1, 4);
+
+for k = 1:4
+    % Coefficient term (e.g., a_n, a_{n-1}, a_{n-2}, a_0)
     coeff_term = sprintf('a_{%d}', coeff_powers(k));
     
     % Full label for Colorbar (with units)
-    if coeff_powers(k) == 1
+    if coeff_powers(k) == 0
+        unit_term = '\mathrm{[lbf]}';
+    elseif coeff_powers(k) == 1
         unit_term = '\mathrm{[lbf/(in/s)]}';
     else
         unit_term = sprintf('\\mathrm{[lbf/(in/s)^{%d}]}', coeff_powers(k));
     end
+    
     coeff_labels_full{k} = ['$' coeff_term '\ ' unit_term '$'];
-    coeff_labels_row{k} = ['$' coeff_term '$']; 
+    coeff_labels_row{k} = ['$' coeff_term '$'];
 end
 
 %% FIGURE
-figure('Name', 'Polynomial Coefficients Maps', 'Position', [100,0,950,900]);
+figure('Name', 'Polynomial Coefficients Maps', 'Position', [100,0,950,1100]);
 
 % Grids
 lsc_f = linspace(min(lsc_vals), max(lsc_vals), GRID_RESOLUTION);
 hsc_f = linspace(min(hsc_vals), max(hsc_vals), GRID_RESOLUTION);
 [LSC_grid, HSC_grid] = meshgrid(lsc_f, hsc_f);
+
 lsr_f = linspace(min(lsr_vals), max(lsr_vals), GRID_RESOLUTION);
 hsr_f = linspace(min(hsr_vals), max(hsr_vals), GRID_RESOLUTION);
 [LSR_grid, HSR_grid] = meshgrid(lsr_f, hsr_f);
 
-%% Subplots for coefficients
-for c = 1:3
+%% Subplots for coefficients (now 4 rows)
+for c = 1:4
     % Compression
-    subplot(3,2,(c*2)-1);
+    subplot(4,2,(c*2)-1);
     coeff_grid_pos = griddata(lsc_vals, hsc_vals, coeffs_pos(:,coeff_indices(c)), ...
         LSC_grid, HSC_grid, INTERP_METHOD);
     contourf(LSC_grid, HSC_grid, coeff_grid_pos, CONTOUR_LEVELS, 'LineStyle','none');
+    
     cb = colorbar;
     cb.Label.Interpreter = 'latex';
     cb.Label.String = coeff_labels_full{c};
     cb.FontName = FONT_NAME;
     cb.FontSize = COLORBAR_LABEL_FONTSIZE;
+    
     hold on;
     scatter(lsc_vals, hsc_vals, MARKER_SIZE, coeffs_pos(:,coeff_indices(c)), ...
         'filled','MarkerEdgeColor','k');
+    
     xlabel('LSC Setting','FontName',FONT_NAME,'FontWeight','bold');
     ylabel('HSC Setting','FontName',FONT_NAME,'FontWeight','bold');
     box off;
     set(gca,'FontName',FONT_NAME);
     ytick = unique(round(get(gca,'YTick')));
     set(gca,'YTick', ytick);
-
+    
     % Rebound
-    subplot(3,2,(c*2));
+    subplot(4,2,(c*2));
     coeff_grid_neg = griddata(lsr_vals, hsr_vals, coeffs_neg(:,coeff_indices(c)), ...
         LSR_grid, HSR_grid, INTERP_METHOD);
     contourf(LSR_grid, HSR_grid, coeff_grid_neg, CONTOUR_LEVELS, 'LineStyle','none');
+    
     cb = colorbar;
     cb.Label.Interpreter = 'latex';
     cb.Label.String = coeff_labels_full{c};
     cb.FontName = FONT_NAME;
     cb.FontSize = COLORBAR_LABEL_FONTSIZE;
+    
     hold on;
     scatter(lsr_vals, hsr_vals, MARKER_SIZE, coeffs_neg(:,coeff_indices(c)), ...
         'filled','MarkerEdgeColor','k');
+    
     xlabel('LSR Setting','FontName',FONT_NAME,'FontWeight','bold');
     ylabel('HSR Setting','FontName',FONT_NAME,'FontWeight','bold');
     box off;
@@ -128,21 +147,19 @@ for c = 1:3
     set(gca,'YTick', ytick);
 end
 
-%% Add headers and Row labels
-ax1 = subplot(3,2,1);
-ax2 = subplot(3,2,2);
-ax3 = subplot(3,2,3);
-ax5 = subplot(3,2,5);
+%% Add headers
+ax1 = subplot(4,2,1);
+ax2 = subplot(4,2,2);
+
 p1 = get(ax1,'Position');
 p2 = get(ax2,'Position');
-p3 = get(ax3,'Position');
-p5 = get(ax5,'Position');
 
 % Column Headers
 annotation('textbox',[p1(1), p1(2)+p1(4)+0.02, p1(3), 0.03], ...
     'String','Compression', 'FontName',FONT_NAME, ...
     'FontSize',16,'FontWeight','bold','HorizontalAlignment','center',...
     'EdgeColor','none');
+
 annotation('textbox',[p2(1), p2(2)+p2(4)+0.02, p2(3), 0.03], ...
     'String','Rebound', 'FontName',FONT_NAME, ...
     'FontSize',16,'FontWeight','bold','HorizontalAlignment','center',...

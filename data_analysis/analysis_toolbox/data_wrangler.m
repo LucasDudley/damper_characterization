@@ -1,4 +1,5 @@
 clear, clc, close all
+
 % Paths
 out_path = "G:\.shortcut-targets-by-id\1vCayBu0JWPEaCjSa5KhpGMqdHFvsMCFY\Senior_Design\Data Collection\matfiles";
 out_name = "valving_results_data.mat";
@@ -18,8 +19,9 @@ opp_vel_perc = 0.15; % percent of comp/rebound to consider in fit
 v_knee_fixed = 1;
 
 load(load_path, "test_data");
-run_fields = fieldnames(test_data); % Only keep "rX" (avoid run_guide)
+run_fields = fieldnames(test_data); 
 run_fields = run_fields( ~cellfun(@isempty, regexp(run_fields, "^r\d+$")) );
+
 results = struct();
 
 for ri = 1:numel(run_fields)
@@ -29,13 +31,16 @@ for ri = 1:numel(run_fields)
     run_results = process_run_data(test_data.(rf), ...
                                    Nbins_FD, Nbins_FV, Nbins_FV_all, ...
                                    max_vel_bin_width, poly_order, opp_vel_perc, ...
-                                   v_knee_fixed); % Removed v_fit_max from args
+                                   v_knee_fixed); 
     
     results.(rf) = run_results;
+    fprintf('Processed run: %s\n', rf);
 end
 
 % Save Results
 save(fullfile(out_path, out_name), "results");
+fprintf('Data saved to: %s\n', fullfile(out_path, out_name));
+
 
 %% Helper Functions
 
@@ -128,11 +133,10 @@ function results = process_run_data(run_data, Nbins_FD, Nbins_FV, Nbins_FV_all, 
     [results.PW_fit_all.neg] = fit_piecewise_linear(v_reb_all_plus_opp, f_reb_all_plus_opp, v_fit_max_dyn, v_knee_fixed, opp_vel_perc);
 end
 
-
 function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_fixed, opp_vel_perc)
 % FIT_PIECEWISE_LINEAR Fits a two-segment piecewise linear model with FIXED knee point.
 % Model: F = F0 + C_LS*min(|v|, v_knee) + C_HS*max(0, |v| - v_knee)
-
+    
     v_abs = abs(v_data);
     
     % Filter data to the maximum fit velocity
@@ -197,7 +201,7 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         valid_fit = false;
     end
     
-    % Calculate R-squared for this fit
+    % --- Calculate Global R-squared ---
     f_prime_pred = M * P;
     SS_res = sum((f_prime - f_prime_pred).^2);
     SS_tot = sum((f_prime - mean(f_prime)).^2);
@@ -206,15 +210,54 @@ function model_results = fit_piecewise_linear(v_data, f_data, v_fit_max, v_knee_
         valid_fit = false;
     end
     
-    % STEP 3: Store the results
+    % STEP 3: Store the results and calculate separate R2s
     if valid_fit
         R2 = 1 - (SS_res / SS_tot);
         
+        % Reconstruct predicted force for region-based calculation
+        f_pred_full = f_prime_pred + F0_mean;
+        
+        % --- Calculate LS R-squared ( |v| <= vk ) ---
+        mask_ls = v_a <= vk;
+        if sum(mask_ls) > 2
+            y_ls = f(mask_ls);
+            y_pred_ls = f_pred_full(mask_ls);
+            SS_res_ls = sum((y_ls - y_pred_ls).^2);
+            SS_tot_ls = sum((y_ls - mean(y_ls)).^2);
+            
+            if SS_tot_ls > 1e-10
+                R2_LS = 1 - (SS_res_ls / SS_tot_ls);
+            else
+                R2_LS = NaN;
+            end
+        else
+            R2_LS = NaN;
+        end
+        
+        % --- Calculate HS R-squared ( |v| > vk ) ---
+        mask_hs = v_a > vk;
+        if sum(mask_hs) > 2
+            y_hs = f(mask_hs);
+            y_pred_hs = f_pred_full(mask_hs);
+            SS_res_hs = sum((y_hs - y_pred_hs).^2);
+            SS_tot_hs = sum((y_hs - mean(y_hs)).^2);
+            
+            if SS_tot_hs > 1e-10
+                R2_HS = 1 - (SS_res_hs / SS_tot_hs);
+            else
+                R2_HS = NaN;
+            end
+        else
+            R2_HS = NaN;
+        end
+
         model_results.F0 = F0_mean;
         model_results.C_LS = C_LS;
         model_results.C_HS = C_HS;
         model_results.v_knee = vk;
         model_results.R2 = R2;
+        model_results.R2_LS = R2_LS;
+        model_results.R2_HS = R2_HS;
         model_results.v_data = v;
         model_results.f_data = f;
     else
@@ -228,6 +271,8 @@ function res = initialize_nan_pw_results()
     res.C_HS = NaN;
     res.v_knee = NaN;
     res.R2   = NaN;
+    res.R2_LS = NaN;
+    res.R2_HS = NaN;
     res.v_data = [];
     res.f_data = [];
 end
