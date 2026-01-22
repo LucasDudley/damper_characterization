@@ -3,7 +3,7 @@
 clear, clc, close all
 s = settings;
 s.matlab.appearance.figure.GraphicsTheme.TemporaryValue= 'light'; %set figure background to light
-
+set(0, 'DefaultFigureWindowStyle', 'normal');
 % Add damper model to path
 addpath(fullfile(fileparts(pwd), 'ohlins_model'));
 set(groot, 'DefaultAxesFontName', 'Times New Roman')
@@ -12,7 +12,7 @@ set(groot, 'DefaultTextFontName', 'Times New Roman')
 %% Inputs
 inputs.max_linear_vel_range = linspace(0.5, 6, 10); %[in/s]
 inputs.stroke = 1.5; %[in]
-inputs.gear_ratio = 1; %[motor/crank]
+inputs.gear_ratio = 10; %[motor/crank]
 inputs.mass = (2) / 32.17; %[slugs]
 inputs.Lc = 6; %[in]
 
